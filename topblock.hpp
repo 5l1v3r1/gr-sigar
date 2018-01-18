@@ -65,6 +65,7 @@ public:
 		source->set_if_gain(20.0);
 
 		/* Set up the connections */
+		// Decision here for testing
 		connect(source, 0, stv, 0);
 		connect(source, 0, thr, 0);
 		connect(thr, 0, fs, 0);
