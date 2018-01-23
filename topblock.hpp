@@ -31,6 +31,7 @@
 #include <gnuradio/blocks/throttle.h>
 #include <gnuradio/blocks/file_meta_sink.h>
 #include "scanner_sink.hpp"
+#include <gnuradio/blocks/file_source.h>
 
 class TopBlock : public gr::top_block
 {
@@ -38,7 +39,7 @@ public:
 	TopBlock(double centre_freq_1, double centre_freq_2, double sample_rate,
 		 double fft_width, double bandwidth1, double bandwidth2,
 		 double step, unsigned int avg_size, double spread,
-		 double threshold, double ptime, const std::string &outcsv) :
+		 double threshold, double ptime, const std::string &outcsv, const std::string &testfile) :
 		gr::top_block("Top Block"),
 		vector_length(sample_rate / fft_width),
 		window(GetWindow(vector_length)),
@@ -49,31 +50,47 @@ public:
 		ctf(gr::blocks::complex_to_mag_squared::make(vector_length)),
 		iir(gr::filter::single_pole_iir_filter_ff::make(1.0, vector_length)),
 		lg(gr::blocks::nlog10_ff::make(10, vector_length, -20 * std::log10(float(vector_length)) -10 * std::log10(float(GetWindowPower() / vector_length)))),
+		//
 		// throttle
 		thr(gr::blocks::throttle::make(8, sample_rate, true)),
 		// file meta sink
 		fs(gr::blocks::file_meta_sink::make(8, "blank.bin", sample_rate, 1, gr::blocks::GR_FILE_FLOAT, true, 1000000, "", true)),
+		// Test Source
+		tsrc(gr::blocks::file_source::make(8, "blank.bin", true)),
 		/* Sink - this does most of the interesting work */
-		sink(make_scanner_sink(source, vector_length, centre_freq_1, centre_freq_2, sample_rate, bandwidth1, bandwidth2, step, avg_size, spread, threshold, ptime, fs, thr, outcsv))
+		sink(make_scanner_sink(source, vector_length, centre_freq_1, centre_freq_2, sample_rate, bandwidth1, bandwidth2, step, avg_size, spread,
+			threshold, ptime, fs, thr, outcsv, testfile))
 	{
 		/* Set up the OsmoSDR Source */
-		source->set_sample_rate(sample_rate);
-		source->set_center_freq(centre_freq_1);
-		source->set_freq_corr(0.0);
-		source->set_gain_mode(false);
-		source->set_gain(10.0);
-		source->set_if_gain(20.0);
+		//source->set_file_source(testfile);
+			source->set_sample_rate(sample_rate);
+			source->set_center_freq(centre_freq_1);
+			source->set_freq_corr(0.0);
+			source->set_gain_mode(false);
+			source->set_gain(10.0);
+			source->set_if_gain(20.0);
+
 
 		/* Set up the connections */
 		// Decision here for testing
-		connect(source, 0, stv, 0);
-		connect(source, 0, thr, 0);
+		if (testfile[0] == '\0')
+		{
+			connect(source, 0, stv, 0);        // to signal detection
+			connect(source, 0, thr, 0);        // to file sink
+		}
+		else
+		{
+			tsrc->open(testfile.c_str(), true); // open new file
+			connect(tsrc, 0, stv, 0);          // to signal detection
+			connect(tsrc, 0, thr, 0);          // to file sink
+		}
 		connect(thr, 0, fs, 0);
 		connect(stv, 0, fft, 0);
 		connect(fft, 0, ctf, 0);
 		connect(ctf, 0, iir, 0);
 		connect(iir, 0, lg, 0);
 		connect(lg, 0, sink, 0);
+
 
 		// close file_sink
 		fs->close();
@@ -105,6 +122,7 @@ private:
 	}
 
 	size_t vector_length;
+
 	std::vector<float> window;
 	osmosdr::source::sptr source;
 	gr::blocks::stream_to_vector::sptr stv;
@@ -113,6 +131,7 @@ private:
 	gr::filter::single_pole_iir_filter_ff::sptr iir;
 	gr::blocks::nlog10_ff::sptr lg;
 	gr::blocks::throttle::sptr thr; //throttle
-	gr::blocks::file_meta_sink::sptr fs; //define file_sink
+	gr::blocks::file_meta_sink::sptr fs; //file sink
+	gr::blocks::file_source::sptr tsrc; //file source
 	scanner_sink_sptr sink;
 };

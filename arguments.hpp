@@ -36,6 +36,7 @@ public:
 		fft_width(1000.0),
 		step(-1.0),
 		ptime(1.0)
+		//testfile('\0')
 	{
 		argp_parse (&argp_i, argc, argv, 0, 0, this);
 	}
@@ -106,6 +107,11 @@ public:
 		return outcsv;
 	}
 
+	std::string get_testfile()
+	{
+		return testfile;
+	}
+
 private:
 	static error_t s_parse_opt(int key, char *arg, struct argp_state *state)
 	{
@@ -153,6 +159,9 @@ private:
 		case 'o':
 			outcsv = std::string(arg);
 			break;
+		case 'q':
+			testfile = std::string(arg);
+			break;
 		case ARGP_KEY_ARG:
 			if (state->arg_num > 0)
 				argp_usage(state);
@@ -180,6 +189,7 @@ private:
 	double step;
 	double ptime;
 	std::string outcsv;
+	std::string testfile;
 };
 
 argp_option Arguments::options[] = {
@@ -195,6 +205,7 @@ argp_option Arguments::options[] = {
 	{"step", 'z', "FREQ", 0, "Increment step in MHz (default: sample_rate / 4)"},
 	{"time", 'p', "TIME", 0, "Time in seconds to scan on each frequency (default: 1)"},
 	{"output-csv", 'o', "OUTCSV", 0, "Output results to CSV file and save IQ data (default: [none])"},
+	{"test-mode", 'q', "TESTFILE", 0, "Test mode uses an IQ file to check detection and recording"},
 	{0}
 };
 

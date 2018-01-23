@@ -38,7 +38,7 @@ public:
 		     double centre_freq_2, double bandwidth0, double bandwidth1, double bandwidth2,
 		     double step, unsigned int avg_size, double spread, double threshold, double ptime,
 		     gr::blocks::file_meta_sink::sptr fs, gr::blocks::throttle::sptr thr,
-				 const std::string &outcsv) :
+				 const std::string &outcsv, const std::string &testfile) :
 		gr::block("scanner_sink",
 			  gr::io_signature::make(1, 1, sizeof (float) * vector_length),
 			  gr::io_signature::make(0, 0, 0)),
@@ -60,7 +60,8 @@ public:
 		m_start_time(time(0)), //the start time of the scan (useful for logging/reporting/monitoring)
 		m_fs(fs),
 		m_thr(thr),
-		m_outcsv(NULL)
+		m_outcsv(NULL),
+		m_testfile(testfile)
 	{
 		ZeroBuffer();
 		create_run_dir(); // Create directory for the IQ files
@@ -128,13 +129,17 @@ private:
 					exit(0); //TODO: This probably isn't the right thing, but it'll do for now
 				}
 				m_centre_freq_1 += m_step; //calculate the frequency we should change to
-				double actual = m_source->set_center_freq(m_centre_freq_1); //change frequency
-				if ((m_centre_freq_1 - actual < 10.0) && (actual - m_centre_freq_1 < 10.0)) //success
-					break; //so stop changing frequency
-			}
+				/*if (m_testfile[0] == '\0')
+				{
+					double actual = m_source->set_center_freq(m_centre_freq_1); //change frequency
+					if ((m_centre_freq_1 - actual < 10.0) && (actual - m_centre_freq_1 < 10.0))
+						break; //so stop changing frequency
+				}*/
+				break;
 			m_wait_count = 0; //new frequency - we've listened 0 times on it
 		}
 	}
+}
 
 	void PrintSignals(double *freqs, float *bands1, float *bands2)
 	{
@@ -306,8 +311,9 @@ private:
 		// Generate filename
 		std::string file_name = m_iq_dir + std::to_string(frq) + "-" + std::to_string(bw)+"_";
 		file_name.append(clk_time);               // Append time stamp
+		//sleep(4);																 // Wait four seconds for source to catch up
 		m_fs->open(file_name + ".bin");           // Tell file sink to open a file
-		sleep(2);                                // Wait two seconts
+		sleep(2);                                // Wait two seconds
 		m_fs->close();                           // Tell file sink to close file
 		m_source->set_sample_rate(m_bandwidth0); // Reset source bw
 		m_thr->set_sample_rate(m_bandwidth0);    // Reset throttle bandwidth
@@ -334,12 +340,23 @@ private:
 	time_t m_start_time;
 	gr::blocks::file_meta_sink::sptr m_fs; //define file_sink
 	gr::blocks::throttle::sptr m_thr; // throttle
+	gr::blocks::stream_to_vector::sptr m_stv;
+	gr::fft::fft_vcc::sptr m_fft;
+	gr::blocks::complex_to_mag_squared::sptr m_ctf;
+	gr::filter::single_pole_iir_filter_ff::sptr m_iir;
+	gr::blocks::nlog10_ff::sptr m_lg;
 	FILE *m_outcsv;
+	std::string m_testfile;
 };
 
 /* Shared pointer thing gnuradio is fond of */
 typedef boost::shared_ptr<scanner_sink> scanner_sink_sptr;
-scanner_sink_sptr make_scanner_sink(osmosdr::source::sptr source, unsigned int vector_length, double centre_freq_1, double centre_freq_2, double bandwidth0, double bandwidth1, double bandwidth2, double step, unsigned int avg_size, double spread, double threshold, double ptime, gr::blocks::file_meta_sink::sptr fs, gr::blocks::throttle::sptr thr, const std::string &outcsv)
+scanner_sink_sptr make_scanner_sink(osmosdr::source::sptr source, unsigned int vector_length,
+	 double centre_freq_1, double centre_freq_2, double bandwidth0, double bandwidth1, double bandwidth2,
+	 double step, unsigned int avg_size, double spread, double threshold, double ptime,
+	 gr::blocks::file_meta_sink::sptr fs, gr::blocks::throttle::sptr thr,
+	 const std::string &outcsv, const std::string &testfile)
 {
-	return boost::shared_ptr<scanner_sink>(new scanner_sink(source, vector_length, centre_freq_1, centre_freq_2, bandwidth0, bandwidth1, bandwidth2, step, avg_size, spread, threshold, ptime, fs, thr, outcsv));
+	return boost::shared_ptr<scanner_sink>(new scanner_sink(source, vector_length, centre_freq_1, centre_freq_2,
+		bandwidth0, bandwidth1, bandwidth2, step, avg_size, spread, threshold, ptime, fs, thr, outcsv, testfile));
 }

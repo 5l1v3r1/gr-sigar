@@ -41,4 +41,7 @@ Thumbs.db
 # Specific items #
 ##################
 bin_files/
+test_scripts/
 gr-scan
+*.bin
+*.bin.hdr
