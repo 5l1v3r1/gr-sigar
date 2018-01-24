@@ -8,6 +8,9 @@ Print frequency and bandwidth of found peaks.
 
 No IQ files are created if you do not specify a csv file.
 
+To compile, run:
+        $ make
+
 Recommended settings:
 	-t 7
 	-r 20
