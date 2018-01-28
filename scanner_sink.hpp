@@ -32,7 +32,6 @@
 #include <gnuradio/blocks/file_sink.h>
 #include <osmosdr/source.h>
 
-
 class scanner_sink : public gr::block
 {
 public:
@@ -67,13 +66,13 @@ public:
 		m_testfile(testfile)
 	{
 		ZeroBuffer();
-		create_run_dir(); // Create directory for the IQ files
+		 // Create directory for the IQ files, if outcsv is not empty, chech csv directory
+		create_run_dirs(!outcsv.empty());
 		std::remove("blank.bin.hdr"); // Clean up from initialization of file meta sink
 		std::remove("blank.bin");
 		if (!outcsv.empty()) {
 			bool write_csv_header = access(outcsv.c_str(), F_OK) == -1;
-			//TODO: autommate csv_files directory creation
-			m_outcsv = fopen(("csv_files/"+outcsv).c_str(), "a+");
+			m_outcsv = fopen((m_csv_dir+outcsv).c_str(), "a+");
 			if (!m_outcsv) {
 				fprintf(stderr, "[-] Error opening output CSV file %s\n", outcsv.c_str());
 				exit(1);
@@ -277,18 +276,19 @@ private:
 		fflush(m_outcsv);
 	}
 
-	void create_run_dir()
+	void create_run_dirs(bool csv)
 	{
 		char dat[10]; // Date
 		char ts[7];   // time stamp
 		strftime(dat, 10, "%d%b%Y", localtime(&m_start_time)); // Format date
 		strftime(ts, 7, "%H%M%S", localtime(&m_start_time));   // Format time stamp
 
-		std::string bin_dir = "bin_files";              // Main directory
+		std::string bin_dir = "bin_files";              // Main bin directory
+		m_csv_dir = "csv_files/";												// Directory for CSV file
 		std::string soi_dir = "/SOI_";                 // Daily runs
-		soi_dir.append(dat);                                 // Append date
+		soi_dir.append(dat);                           // Append date
 		std::string run_dir = "/run_";                 // Individual run directory
-		run_dir.append(ts);                                  // append time stamp
+		run_dir.append(ts);                            // append time stamp
 		m_iq_dir = bin_dir + soi_dir + run_dir + "/";  // Complete file path
 
     // Check to see if daily directory exists
@@ -305,6 +305,13 @@ private:
 		}
 		// Create run directory
 		std::experimental::filesystem::create_directory(m_iq_dir);
+
+		// csv will be true if an output csv file was specified, so we should check
+		// the existence of the csv_directory
+		if ((csv) && (!std::experimental::filesystem::is_directory(m_csv_dir)))
+		{
+			std::experimental::filesystem::create_directory(m_csv_dir);
+		}
 	}
 
 	std::string RecordIQ(float frq, float bw, char clk_time[7])
@@ -324,7 +331,9 @@ private:
 		return (file_name+".bin");                // Return filename
 	}
 
+
 	std::string m_iq_dir;
+	std::string m_csv_dir;
 	std::set<double> m_signals;
 	osmosdr::source::sptr m_source;
 	float *m_buffer;
@@ -344,11 +353,6 @@ private:
 	time_t m_start_time;
 	gr::blocks::file_meta_sink::sptr m_fs; //define file_sink
 	gr::blocks::throttle::sptr m_thr; // throttle
-	gr::blocks::stream_to_vector::sptr m_stv;
-	gr::fft::fft_vcc::sptr m_fft;
-	gr::blocks::complex_to_mag_squared::sptr m_ctf;
-	gr::filter::single_pole_iir_filter_ff::sptr m_iir;
-	gr::blocks::nlog10_ff::sptr m_lg;
 	FILE *m_outcsv;
 	std::string m_testfile;
 };

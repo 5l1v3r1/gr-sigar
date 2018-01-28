@@ -104,7 +104,15 @@ public:
 
 	std::string get_outcsv()
 	{
-		return outcsv;
+		// Return the output filename with the arguments used and a .csv extension
+		if (outcsv[0] == '\0')
+			{
+				return (outcsv);
+			}
+		else
+			{
+				return (outcsv + runops + ".csv");
+			}
 	}
 
 	std::string get_testfile()
@@ -124,36 +132,58 @@ private:
 		switch (key)
 		{
 		case 'a':
+			runops+="-a";
+			runops.append(arg);// arg;
 			avg_size = atoi(arg);
 			break;
 		case 'f':
+			runops+="-f";
+			runops.append(arg);
 			bandwidth1 = atof(arg) * 1000.0; //kHz
 			break;
 		case 'c':
+			runops+="-c";
+			runops.append(arg);
 			bandwidth2 = atof(arg) * 1000.0; //kHz
 			break;
 		case 's':
+			runops+="-s";
+			runops.append(arg);
 			spread = atof(arg) * 1000.0; //kHz
 			break;
 		case 't':
+			runops+="-t";
+			runops.append(arg);
 			threshold = atof(arg);
 			break;
 		case 'x':
+			runops+="-x";
+			runops.append(arg);
 			centre_freq_1 = atof(arg) * 1000000.0; //MHz
 			break;
 		case 'y':
+			runops+="-y";
+			runops.append(arg);
 			centre_freq_2 = atof(arg) * 1000000.0; //MHz
 			break;
 		case 'r':
+			runops+="-r";
+			runops.append(arg);
 			sample_rate = atof(arg) * 1000000.0; //MSamples/s
 			break;
 		case 'w':
+			runops+="-w";
+			runops.append(arg);
 			fft_width = atoi(arg);
 			break;
 		case 'z':
+			runops+="-z";
+			runops.append(arg);
 			step = atof(arg) * 1000000.0; //MHz
 			break;
 		case 'p':
+			runops+="-p";
+			runops.append(arg);
 			ptime = atof(arg);
 			break;
 		case 'o':
@@ -177,6 +207,7 @@ private:
 	static argp_option options[];
 	static argp argp_i;
 
+	std::string runops;
 	unsigned int avg_size;
 	double bandwidth1;
 	double bandwidth2;
