@@ -6,9 +6,12 @@ Fast radio spectrum scanner based on SDR and GnuRadio.
 Tune to frequencies in specified range and tri fing peak in frequency power spectrum.
 Print frequency and bandwidth of found peaks.
 
+To install, run:
+	$ make
+
 No IQ files are created if you do not specify a csv file.
 
-Recommended settings:
+Recommended settings: (still testing)
 	-t 7
 	-r 20
 	-w 1024
