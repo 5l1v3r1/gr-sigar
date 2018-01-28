@@ -35,7 +35,6 @@
 class scanner_sink : public gr::block
 {
 public:
-	//TODO: use struct to make this readable.
 	scanner_sink(osmosdr::source::sptr source, unsigned int vector_length, double centre_freq_1,
 		     double centre_freq_2, double bandwidth0, double bandwidth1, double bandwidth2,
 		     double step, unsigned int avg_size, double spread, double threshold, double ptime,
@@ -322,7 +321,7 @@ private:
 		// Generate filename
 		std::string file_name = m_iq_dir + std::to_string(frq) + "-" + std::to_string(bw)+"_";
 		file_name.append(clk_time);               // Append time stamp
-		//sleep(4);																 // Wait four seconds for source to catch up
+		//sleep(4);															 // Wait four seconds for source to catch up
 		m_fs->open(file_name + ".bin");           // Tell file sink to open a file
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));    // Wait 400ms
 		m_fs->close();                           // Tell file sink to close file
