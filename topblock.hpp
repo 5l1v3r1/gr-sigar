@@ -62,14 +62,12 @@ public:
 			threshold, ptime, fs, thr, outcsv, testfile))
 	{
 		/* Set up the OsmoSDR Source */
-		//source->set_file_source(testfile);
 			source->set_sample_rate(sample_rate);
 			source->set_center_freq(centre_freq_1);
 			source->set_freq_corr(0.0);
 			source->set_gain_mode(false);
 			source->set_gain(10.0);
 			source->set_if_gain(20.0);
-
 
 		/* Set up the connections */
 		// Decision here for testing

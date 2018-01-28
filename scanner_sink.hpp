@@ -18,6 +18,8 @@
 */
 
 #include <ctime>
+#include <chrono>
+#include <thread>
 #include <set>
 #include <utility>
 #include <vector>
@@ -34,6 +36,7 @@
 class scanner_sink : public gr::block
 {
 public:
+	//TODO: use struct to make this readable.
 	scanner_sink(osmosdr::source::sptr source, unsigned int vector_length, double centre_freq_1,
 		     double centre_freq_2, double bandwidth0, double bandwidth1, double bandwidth2,
 		     double step, unsigned int avg_size, double spread, double threshold, double ptime,
@@ -69,7 +72,8 @@ public:
 		std::remove("blank.bin");
 		if (!outcsv.empty()) {
 			bool write_csv_header = access(outcsv.c_str(), F_OK) == -1;
-			m_outcsv = fopen(outcsv.c_str(), "a+");
+			//TODO: autommate csv_files directory creation
+			m_outcsv = fopen(("csv_files/"+outcsv).c_str(), "a+");
 			if (!m_outcsv) {
 				fprintf(stderr, "[-] Error opening output CSV file %s\n", outcsv.c_str());
 				exit(1);
@@ -129,12 +133,12 @@ private:
 					exit(0); //TODO: This probably isn't the right thing, but it'll do for now
 				}
 				m_centre_freq_1 += m_step; //calculate the frequency we should change to
-				/*if (m_testfile[0] == '\0')
+				if (m_testfile[0] == '\0')
 				{
 					double actual = m_source->set_center_freq(m_centre_freq_1); //change frequency
 					if ((m_centre_freq_1 - actual < 10.0) && (actual - m_centre_freq_1 < 10.0))
 						break; //so stop changing frequency
-				}*/
+				}
 				break;
 			m_wait_count = 0; //new frequency - we've listened 0 times on it
 		}
@@ -313,7 +317,7 @@ private:
 		file_name.append(clk_time);               // Append time stamp
 		//sleep(4);																 // Wait four seconds for source to catch up
 		m_fs->open(file_name + ".bin");           // Tell file sink to open a file
-		sleep(2);                                // Wait two seconds
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));    // Wait 400ms
 		m_fs->close();                           // Tell file sink to close file
 		m_source->set_sample_rate(m_bandwidth0); // Reset source bw
 		m_thr->set_sample_rate(m_bandwidth0);    // Reset throttle bandwidth
