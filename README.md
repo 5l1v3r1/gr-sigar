@@ -13,7 +13,7 @@ No IQ files are created if you do not specify a csv file.
 
 Recommended settings: (still testing)
 	-t 7
-	-r 20
+	-r 15
 	-w 1024
 	-x 86
 	-y 106
