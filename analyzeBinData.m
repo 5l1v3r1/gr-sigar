@@ -33,8 +33,8 @@ duration=L/Fs;              %determines the total duration of the signal in seco
 w = 1000;                     %using an arbitrary window size for now. Line below will be used.                    
 %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
 x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
-%k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
-k = 150;                    % setting the value to 150 temporarily...might cause errors
+k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
+%k = 150;                    % setting the value to 150 temporarily...might cause errors
 %freqData=fft(data,w);       %stores frequency info for the values in the first window
 
 % calculates threshold
