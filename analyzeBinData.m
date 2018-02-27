@@ -68,11 +68,6 @@ for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined
    title("Signal in time domain")
    
    subplot(3,1,3)
-   if c>15
-       hold on
-   else
-       hold off
-   end
    plot(timedata)
    title("Signal I/Q components")
    pause
@@ -100,7 +95,7 @@ end
 % the ratio (R) of the variance of the envelope ot the square of the mean
 % of the envelope. See Identification of the Modulation Type of a Signal by
 % Y. T. Chann
-if std(freqMax)>200 * std(freqMax)<200
+if std(freqMax)>20 * std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
     %msgbox('Signal is frequency modulated')
     disp('Signal is frequency modulated')
 else
@@ -120,6 +115,8 @@ function [maximum, meanValue, modeValue, variance]=getStatsData(freqInfo, xAxis)
 end 
 
 %% Will be used for signal detection (backup to gr-scan)
+% Use this average to determine how many signals are present in the bin
+% data and separate them correspondingly (use windows to blank out the rest
 % AvgfreqData=freqData;
 % for counter=2:k %Averages 30 FFT(w) samples
 %     AvgfreqData= AvgfreqData + fft(data((1:w+1)+(w*counter)),w);
