@@ -1,8 +1,111 @@
 %% This algorithm will evaluate the modulation type of a signal captures
 % Assumptions: the data obtained contains only one usable signal. No signal
 % discrimination has been implemented yet.
+clear
 
-%% Obtains data from file
+%% Initial user input
+init_prompt = ['What do you want to do?\n\n'...
+        'gr-scan:       Run gr-scan\n'...
+        'file:          Search for bin/dat file to analyze\n'...
+        'batch:         scan directory for bin/dat files\n'...
+        'exit\n> '];
+ gr_prompt = {'FFT samples to average'
+        'Course bandwidth in kHz (default: fine bandwidth * 8)'
+        'Fine bandwidth in kHz'
+        'CSV output file name; no extension (required)'
+        'Time to scan each freq in seconds'
+        'Sample rate in MSamples/s)'
+        'Minimum spacing between signals in kHz'
+        'Threshold in dB'
+        'FFT width'
+        'Start frequency in MHz'
+        'End frequency in MHz'
+        'Frequency step in MHz'};
+ gr_flags = {' -a ', ' -c ', ' -f ', ' -o ', ' -p ', ' -r ', ' -s ', ' -t ', ' -w ', ' -x ', ' -y ', ' -z '};
+  
+ dims = [1 40];
+ %Default values for gr-scan
+ gr_defs = {'1000', '200','25','','1','2','50','3','1000','87','108','.5'};
+while true
+    usr_in=input(init_prompt, 's');
+    switch usr_in
+        case 'gr-scan'
+            gr_vars=inputdlg(gr_prompt, 'gr-scan options', dims, gr_defs);
+            
+            %Cancel "event": skip to next loop iteration
+            if isempty(gr_vars)
+                continue
+            end
+            
+            %Use loop to check value validity and build commad options
+            i = 1;
+            %A while loop was selected so that the loop could be reset and 
+            %the dialog could be recalled with the current values.
+            
+            while i < 13
+                [num, stat] = str2num(gr_vars{i});
+                %If number conversion fails, we aren't checking the
+                %filename, and the field isn't blank
+                if (stat == 0) && (i ~= 4) && (gr_vars{i} ~= "")
+                    waitfor(msgbox('All values except the filename must be valid numbers', 'Invalid values', 'error', 'modal'));
+                    i = 1;
+                    gr_vars=inputdlg(gr_prompt, 'gr-scan options', dims, gr_vars);
+                %We are checking the filename and it is blank
+                elseif (i == 4) && (gr_vars{i} == "")
+                    waitfor(msgbox('You must specify an output filename', 'Invalid filename', 'error', 'modal'));
+                    i = 1;
+                    gr_vars=inputdlg(gr_prompt, 'gr-scan options', dims, gr_vars);
+                else
+                    %Value is ok enough
+                    i = i+1;
+                end
+            end
+            
+            options=[];
+            %Create options string for calling gr-scan with specified
+            %parameters
+            for i=1:12
+                switch gr_vars{i}
+                    case ""             %Ignore if field was left blank
+                        continue
+                    otherwise           %Add flag and value to options string
+                        if i == 4
+                            options = [options, gr_flags{i}, gr_vars{i}, '.csv'];
+                        else
+                            options = [options, gr_flags{i}, gr_vars{i}];
+                        end
+                end 
+            end
+            
+            command=['./gr-scan ', options];
+            
+            %[status, cmdout] = unix(command, '-echo');
+            [status, cmdout] = system(['echo ',command], '-echo');
+            if status ~= 0
+                waitfor(msgbox('gr-scan weas not executed successfully', 'gr-scan failure', 'error', 'modal'))
+            end
+            
+        case 'file'
+            get_file(false)
+            
+        case 'batch'
+            get_file(true)
+            
+        case 'exit'
+            break
+            
+        otherwise
+            fprintf('\nCommand not recognized!\n\n')
+    end
+end
+
+function batch_get()
+    %Do the thing
+    
+end
+
+function get_file(plural)
+% Obtains data from file
 % gets data from the binary file created by gr-scan
 % ****add algorithm that looks thtough a folder and pulls data one file at
 % time. This will eventually call the function that will do the frequency
@@ -16,19 +119,28 @@
 %     stores data in the .csv file next to its corresponding entry
 % end
 
-% gets I/Q data
-[FileName,PathName,FilterIndex] = uigetfile('.bin');
+if plural
+    [FileName,PathName,FilterIndex] = uigetfile('*.bin; *.dat', 'Select multiple files', 'MultiSelect', 'on');
+else
+    [FileName,PathName,FilterIndex] = uigetfile('*.bin; *.dat', 'Select a file');
+end
+
 %FileName = 'Random_music.bin';
 %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
-
-[data, Fs, IF]=GetBinData(PathName, FileName);%gets I/Q data,sample frequency, and IF
+if FileName ~= 0
+    [data, Fs, IF]=GetBinData(PathName, FileName);%gets I/Q data,sample frequency, and IF
+    frequent_anal
+end
 
 %[data, Fs, IF]=GetBinData('C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\Random_music.bin');%gets I/Q data,sample frequency, and IF
+
+end
+
+function frequent_anal() 
+% frequency analysis***
+% this area will be a function that will return modulation type
 L=length(data);             %total number of samples recorded.
 duration=L/Fs;              %determines the total duration of the signal in seconds
-
-%% frequency analysis*** 
-% this area will be a function that will return modulation type
 
 w = 1000;                     %using an arbitrary window size for now. Line below will be used.                    
 %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
@@ -101,7 +213,7 @@ if std(freqMax)>20 * std(freqMax)<20e3      %Common audio frequencies vary betwe
 else
     disp('Signal is not frequency modulated')
 end
-
+end
 %% Measures basic statistical values for data contained in vector freqInfo 
 % and returns the frequency where the max value was found, the mean, the 
 % mode and the variance
@@ -153,4 +265,3 @@ function [data, Fs, IF]=GetBinData(filePath, fileName)
     data = data-mean(data);
     
 end
-
