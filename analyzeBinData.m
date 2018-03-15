@@ -129,14 +129,14 @@ end
 %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
 if FileName ~= 0
     [data, Fs, IF]=GetBinData(PathName, FileName);%gets I/Q data,sample frequency, and IF
-    frequent_anal
+    freq_analysis
 end
 
 %[data, Fs, IF]=GetBinData('C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\Random_music.bin');%gets I/Q data,sample frequency, and IF
 
 end
 
-function frequent_anal() 
+function freq_analysis() 
 % frequency analysis***
 % this area will be a function that will return modulation type
 L=length(data);             %total number of samples recorded.
