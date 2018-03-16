@@ -24,15 +24,16 @@ init_prompt = ['What do you want to do?\n\n'...
         'Frequency step in MHz (default: sample rate / 4)'};
  gr_flags = {' -a ', ' -c ', ' -f ', ' -o ', ' -p ', ' -r ', ' -s ', ' -t ', ' -w ', ' -x ', ' -y ', ' -z '};
  
+ title = 'gr-scan options (leave blank for defaults)';
  %Dimension for text boxes
- dims = [1 55];
+ dims = [1 65];
  
 while true
     %Get user input for what to do
     usr_in=input(init_prompt, 's');
     switch usr_in
         case 'gr-scan'
-            gr_vars=inputdlg(gr_prompt, 'gr-scan options (leave blank for defaults)', dims);
+            gr_vars=inputdlg(gr_prompt, title, dims);
             
             %Cancel button clicked: skip to next loop iteration
             if isempty(gr_vars)
@@ -43,10 +44,15 @@ while true
             i = 1;
             %A while loop was selected so that the loop could be reset and 
             %the dialog could be recalled with the current user values.
-            
             while i < 13
-                %str2double doesn't give a status variable
+                %If the user hits cancel after an error, gr_vars will be
+                %0x0 and breaks everything, so we break this loop
+                if isempty(gr_vars)
+                    break
+                end
+                %str2double doesn't return a status code
                 [num, stat] = str2num(gr_vars{i}); %#ok<ST2NM>
+                
                 %If number conversion fails, we aren't checking the
                 %filename, and the field isn't blank
                 if (stat == 0) && (i ~= 4) && (gr_vars{i} ~= "")
@@ -65,6 +71,12 @@ while true
                     %Value is ok enough
                     i = i+1;
                 end
+            end
+            %This must be checked again because only the while loop was
+            %broken if this condition was previously met and we need to exit
+            %the switch too
+            if isempty(gr_vars)
+                continue
             end
             
             options=[];
@@ -91,7 +103,6 @@ while true
             if status ~= 0
                 waitfor(msgbox('gr-scan weas not executed successfully', 'gr-scan failure', 'error', 'modal'))
             end
-            
         case 'analysis'
             %specify file(s) to analyze
             get_file
