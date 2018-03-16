@@ -6,7 +6,7 @@ clear
 %% Initial user input
 init_prompt = ['What do you want to do?\n\n'...
         'gr-scan:       Run gr-scan\n'...
-        'analysis:      Search for bin/dat file to analyze\n'...
+        'analysis:      Search for bin/dat file(s) to analyze\n'...
         'exit\n> '];
     
  %gr-scan variable options
@@ -76,17 +76,18 @@ while true
                         continue
                     otherwise           %Add flag and value to options string
                         if i == 4
-                            options = [options, gr_flags{i}, gr_vars{i}, '.csv']; %#ok<AGROW>
+                            options = [options, gr_flags{i}, gr_vars{i}, '.csv']; %#ok<AGROW> <---Suppress warning about resizing
                         else
                             options = [options, gr_flags{i}, gr_vars{i}]; %#ok<AGROW>
                         end
                 end 
             end
             
+            %create final command
             command=['./gr-scan ', options];
             
             %[status, cmdout] = unix(command, '-echo');
-            [status, cmdout] = system(['echo ',command], '-echo');
+            [status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
             if status ~= 0
                 waitfor(msgbox('gr-scan weas not executed successfully', 'gr-scan failure', 'error', 'modal'))
             end
@@ -121,19 +122,27 @@ function get_file
     %     stores data in the .csv file next to its corresponding entry
     % end
 
-    [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select multiple files', 'MultiSelect', 'on');
-        
+    [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
+
     %FileName = 'Random_music.bin';
     %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
 
     %FileName = 0 if user hits cancel
+    %Easier to determine type in two different cases as opposed to forcing
+    %FileName to be a cell
     if iscellstr(FileName)
+        %If FileName is a cell string, iterate through indexes for analysis
         for i=1:numel(FileName)
-            [data, Fs, IF]=GetBinData(PathName, FileName{i});%gets I/Q data,sample frequency, and IF
+            [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
             freq_analysis(data, Fs, IF)
+            %Create a new figure for next interation
+            if i~= numel(FileName)
+                figure
+            end
         end
     elseif ischar(FileName)
-        [data, Fs, IF]=GetBinData(PathName, FileName);%gets I/Q data,sample frequency, and IF
+        %Only one file was chosen, no loop required
+        [data, Fs, IF]=GetBinData(PathName, FileName);
         freq_analysis(data, Fs, IF)
     end
 
@@ -231,7 +240,10 @@ end
 function [maximum, meanValue, modeValue, variance]=getStatsData(freqInfo, xAxis)
     %maxIndex = find(freqInfo == max(freqInfo(:)));
     %maximum = xAxis(maxIndex);  %stores frequency where the max value was found
-    maximum = xAxis(freqInfo == max(freqInfo(:))); %can this be done?
+    
+    %The below removes the warning about indexed variabels and is a little
+    %faster. However; it may impact detection.
+    maximum = xAxis(freqInfo == max(freqInfo(:)));
     meanValue = mean(freqInfo); %this value is not being use as of right now
     modeValue = 0;              %requires work
     variance =var(freqInfo);    %this value is not being use as of right now
