@@ -48,9 +48,10 @@ while true
                 %filename, and the field isn't blank
                 if (stat == 0) && (i ~= 4) && (gr_vars{i} ~= "")
                     waitfor(msgbox('All values except the filename must be valid numbers', 'Invalid values', 'error', 'modal'));
+                    %Restart loop for checking values
                     i = 1;
                     gr_vars=inputdlg(gr_prompt, 'gr-scan options', dims, gr_vars);
-                %We are checking the filename and it is blank
+                %If we are checking the filename and it is blank
                 elseif (i == 4) && (gr_vars{i} == "")
                     waitfor(msgbox('You must specify an output filename', 'Invalid filename', 'error', 'modal'));
                     i = 1;
@@ -127,16 +128,23 @@ end
 
 %FileName = 'Random_music.bin';
 %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
-if FileName ~= 0
+
+%FileName = 0 if user hits cancel
+if iscellstr(FileName)
+    for i=1:numel(FileName)
+        [data, Fs, IF]=GetBinData(PathName, FileName{i});%gets I/Q data,sample frequency, and IF
+        freq_analysis(data, Fs, IF)
+    end
+elseif ischar(FileName)
     [data, Fs, IF]=GetBinData(PathName, FileName);%gets I/Q data,sample frequency, and IF
-    freq_analysis
+    freq_analysis(data, Fs, IF)
 end
 
 %[data, Fs, IF]=GetBinData('C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\Random_music.bin');%gets I/Q data,sample frequency, and IF
 
 end
 
-function freq_analysis() 
+function freq_analysis(data, Fs, IF) 
 % frequency analysis***
 % this area will be a function that will return modulation type
 L=length(data);             %total number of samples recorded.
@@ -182,7 +190,7 @@ for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined
    subplot(3,1,3)
    plot(timedata)
    title("Signal I/Q components")
-   pause
+   %pause
    % ****uncomment until here when plots are not needed****************
    
    indices=find(abs(freqData)>threshold);
