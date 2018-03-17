@@ -8,12 +8,15 @@ init_prompt = ['What do you want to do?\n\n'...
         'gr-scan:       Run gr-scan\n'...
         'analysis:      Search for bin/dat file(s) to analyze\n'...
         'exit\n> '];
-    
+ 
+ global soi_data;
+ global csv_file;
  %gr-scan variable options
+ %Might remove file name option
+ %'CSV output file name; no extension (required)'
  gr_prompt = {'FFT samples to average (default: 1000)'
  'Course bandwidth in kHz (default: fine bandwidth * 8)'
         'Fine bandwidth in kHz (default: 25)'
-        'CSV output file name; no extension (required)'
         'Time to scan each freq in seconds (default: 1)'
         'Sample rate in MSamples/s (default: 2)'
         'Minimum spacing between signals in kHz (default: 50'
@@ -22,7 +25,7 @@ init_prompt = ['What do you want to do?\n\n'...
         'Start frequency in MHz (default: 87)'
         'End frequency in MHz (default: 108)'
         'Frequency step in MHz (default: sample rate / 4)'};
- gr_flags = {' -a ', ' -c ', ' -f ', ' -o ', ' -p ', ' -r ', ' -s ', ' -t ', ' -w ', ' -x ', ' -y ', ' -z '};
+ gr_flags = {' -a ', ' -c ', ' -f ', ' -p ', ' -r ', ' -s ', ' -t ', ' -w ', ' -x ', ' -y ', ' -z '};
  
  title = 'gr-scan options (leave blank for defaults)';
  %Dimension for text boxes
@@ -106,6 +109,9 @@ while true
         case 'analysis'
             %specify file(s) to analyze
             get_file
+            %Add error handling in case the above fails
+            %Write to file one time
+            writetable(soi_data, csv_file,'QuoteStrings',true);
             
         case 'exit'
             %exit is the only command that actually brreaks the input loop
@@ -132,9 +138,22 @@ function get_file
     %     calls the frequency analysis function(it will return modulation type)
     %     stores data in the .csv file next to its corresponding entry
     % end
+    
+    global soi_data;
+    global csv_file;
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
-
+    
+    wrk_dir=strsplit(PathName, {'/', '\'});                                     %Split the directory for the selected file(s)
+    run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};        %Pull run date and time (unique to each run)
+    wrk_dir(8:length(wrk_dir))=[];                                              %Clear the path name back to gr-scan directory
+    csv_path = sprintf('%s\\csv_files\\%s-%s*.csv', strjoin(wrk_dir, '\'), ...  %Create a search path with a wildcard
+        char(run_info{1}), char(run_info{2}));
+    csv = dir(csv_path);                                                   %Get CSV that corresponds to the bin file's run
+    csv_file=strjoin({csv.folder, csv.name}, '\');
+    soi_data=readtable(csv_file);%strjoin({csv_file.folder, csv_file.name}, '\'));         %Create a table with csv file info
+    
+    
     %FileName = 'Random_music.bin';
     %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
 
@@ -154,16 +173,24 @@ function get_file
     elseif ischar(FileName)
         %Only one file was chosen, no loop required
         [data, Fs, IF]=GetBinData(PathName, FileName);
-        freq_analysis(data, Fs, IF)
+        freq_analysis(data, Fs, IF, FileName)
     end
-
+    
+    % Add opening CSV; file will need to be imported. CSV
+    % file saving should include directory info so that choosing a random
+    % bin file will import the appropriate CSV file for saving.
+    
     %[data, Fs, IF]=GetBinData('C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\Random_music.bin');%gets I/Q data,sample frequency, and IF
 
 end
 
 %% frequency analysis***
-function freq_analysis(data, Fs, IF) 
+function freq_analysis(data, Fs, IF, FileName) 
     % this area will be a function that will return modulation type
+    
+    global soi_data;
+    global csv_file;
+    
     L=length(data);             %total number of samples recorded.
     
     %Is this needed?
@@ -190,7 +217,7 @@ function freq_analysis(data, Fs, IF)
     freqMean=zeros(k,1);
     freqMode=zeros(k,1);
     freqVariance=zeros(k,1);
-
+    
     for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
         freqData= fft(data((c*w):end),w);
    
@@ -236,12 +263,23 @@ function freq_analysis(data, Fs, IF)
     % the ratio (R) of the variance of the envelope ot the square of the mean
     % of the envelope. See Identification of the Modulation Type of a Signal by
     % Y. T. Chann
+    
     if std(freqMax)>20 * std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
         %msgbox('Signal is frequency modulated')
-        disp('Signal is frequency modulated')
+        
+        %make sure the units work.
+        fprintf('Signal at %0.4f MHz is frequency modulated\n', IF/1e6)
+        mod_type={'Frequency Modulation'};
     else
-        disp('Signal is not frequency modulated')
+        fprintf('Signal at %0.4f MHz is not frequency modulated\n', IF/1e6)
+        mod_type={'Not Frequency Modulation'};
     end
+    
+    % Find index of current freq
+    soi_index=(soi_data.frequency_mhz==IF/1e6);
+
+    % Add entry for determined mod type
+    soi_data.mod_type{soi_index} = mod_type;
 end
 
 %% Measures basic statistical values for data contained in vector freqInfo 
