@@ -12,7 +12,6 @@ init_prompt = ['What do you want to do?\n\n'...
  global soi_data;
  global csv_file;
  %gr-scan variable options
- %Might remove file name option
  %'CSV output file name; no extension (required)'
  gr_prompt = {'FFT samples to average (default: 1000)'
  'Course bandwidth in kHz (default: fine bandwidth * 8)'
