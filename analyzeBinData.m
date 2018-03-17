@@ -95,11 +95,11 @@ while true
             end
             command=['./gr-scan ', options, ' -o ', out_filename(2:end), '.csv'];
             
-            %[status, cmdout] = unix(command, '-echo');
-            [status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
-            if status ~= 0
-                waitfor(msgbox('gr-scan weas not executed successfully', 'gr-scan failure', 'error', 'modal'))
-            end
+            %status could be used to tell if gr-scan breaks or not, but
+            %gr-scan cannot be closed cleanly. 
+            [status, cmdout] = unix(command, '-echo');
+            %[status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
+ 
         case 'analysis'
             %specify file(s) to analyze
             get_file
@@ -140,7 +140,7 @@ function get_file
     
     wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
     run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
-    wrk_dir(8:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
+    wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
     csv_path = sprintf('%s%scsv_files%s%s-%s*.csv', strjoin(wrk_dir, filesep) ...
         , filesep, filesep, char(run_info{1}), ...
         char(run_info{2}));                                                         %Create a search path with a wildcard
@@ -263,10 +263,10 @@ function freq_analysis(data, Fs, IF, FileName)
         %msgbox('Signal is frequency modulated')
         
         %make sure the units work.
-        fprintf('Signal at %0.4f MHz is frequency modulated\n', IF/1e6)
+        fprintf('Signal at %0.4f MHz is frequency modulated\n\n', IF/1e6)
         mod_type={'Frequency Modulation'};
     else
-        fprintf('Signal at %0.4f MHz is not frequency modulated\n', IF/1e6)
+        fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
         mod_type={'Not Frequency Modulation'};
     end
     

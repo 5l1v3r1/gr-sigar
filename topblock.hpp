@@ -68,6 +68,8 @@ public:
 		connect(source, 0, stv, 0);
 		connect(source, 0, thr, 0);
 		connect(thr, 0, fs, 0);
+		//disconnect(fs);            //If these could sommehow be called at the end,
+		//disconnect(thr);					 //We wouldn't need to crash the progrm to exit
 		connect(stv, 0, fft, 0);
 		connect(fft, 0, ctf, 0);
 		connect(ctf, 0, iir, 0);
@@ -79,6 +81,7 @@ public:
 	}
 
 private:
+
 	/* http://en.wikipedia.org/w/index.php?title=Window_function&oldid=508445914 */
 	std::vector<float> GetWindow(size_t n)
 	{
