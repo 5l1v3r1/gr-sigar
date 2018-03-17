@@ -25,7 +25,7 @@ init_prompt = ['What do you want to do?\n\n'...
         'End frequency in MHz (default: 108)'
         'Frequency step in MHz (default: sample rate / 4)'};
  gr_flags = {' -a ', ' -c ', ' -f ', ' -p ', ' -r ', ' -s ', ' -t ', ' -w ', ' -x ', ' -y ', ' -z '};
- 
+ out_filename=[];
  title = 'gr-scan options (leave blank for defaults)';
  %Dimension for text boxes
  dims = [1 65];
@@ -46,7 +46,7 @@ while true
             i = 1;
             %A while loop was selected so that the loop could be reset and 
             %the dialog could be recalled with the current user values.
-            while i < 13
+            while i < length(gr_flags)+1
                 %If the user hits cancel after an error, gr_vars will be
                 %0x0 and breaks everything, so we break this loop
                 if isempty(gr_vars)
@@ -57,17 +57,12 @@ while true
                 
                 %If number conversion fails, we aren't checking the
                 %filename, and the field isn't blank
-                if (stat == 0) && (i ~= 4) && (gr_vars{i} ~= "")
+                if (stat == 0) && (gr_vars{i} ~= "")
                     waitfor(msgbox('All values except the filename must be valid numbers', 'Invalid values', 'error', 'modal'));
                     %Restart loop for checking values
                     i = 1;
                     %calls a new input dialog, passing the current user
                     %defined values as the default values
-                    gr_vars=inputdlg(gr_prompt, 'gr-scan options', dims, gr_vars);
-                %If we are checking the filename and it is blank
-                elseif (i == 4) && (gr_vars{i} == "")
-                    waitfor(msgbox('You must specify an output filename', 'Invalid filename', 'error', 'modal'));
-                    i = 1;
                     gr_vars=inputdlg(gr_prompt, 'gr-scan options', dims, gr_vars);
                 else
                     %Value is ok enough
@@ -84,21 +79,21 @@ while true
             options=[];
             %Create options string for calling gr-scan with specified
             %parameters
-            for i=1:12
+            for i=1:length(gr_flags)
                 switch gr_vars{i}
                     case ""             %Ignore if field was left blank
                         continue
                     otherwise           %Add flag and value to options string
-                        if i == 4
-                            options = [options, gr_flags{i}, gr_vars{i}, '.csv']; %#ok<AGROW> <---Suppress warning about resizing
-                        else
-                            options = [options, gr_flags{i}, gr_vars{i}]; %#ok<AGROW>
-                        end
+                        out_filename = [out_filename, strtrim(gr_flags{i}), gr_vars{i}]; %#ok<AGROW>
+                        options = [options, gr_flags{i}, gr_vars{i}]; %#ok<AGROW>
                 end 
             end
             
             %create final command
-            command=['./gr-scan ', options];
+            if isempty(out_filename)
+                out_filename = '.csv';
+            end
+            command=['./gr-scan ', options, ' -o ', out_filename(2:end), '.csv'];
             
             %[status, cmdout] = unix(command, '-echo');
             [status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
@@ -108,7 +103,7 @@ while true
         case 'analysis'
             %specify file(s) to analyze
             get_file
-            %Add error handling in case the above fails
+            %*******************************Add error handling in case the above fails*******************************
             %Write to file one time
             writetable(soi_data, csv_file,'QuoteStrings',true);
             
@@ -143,14 +138,15 @@ function get_file
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
     
-    wrk_dir=strsplit(PathName, {'/', '\'});                                     %Split the directory for the selected file(s)
-    run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};        %Pull run date and time (unique to each run)
-    wrk_dir(8:length(wrk_dir))=[];                                              %Clear the path name back to gr-scan directory
-    csv_path = sprintf('%s\\csv_files\\%s-%s*.csv', strjoin(wrk_dir, '\'), ...  %Create a search path with a wildcard
-        char(run_info{1}), char(run_info{2}));
-    csv = dir(csv_path);                                                   %Get CSV that corresponds to the bin file's run
-    csv_file=strjoin({csv.folder, csv.name}, '\');
-    soi_data=readtable(csv_file);%strjoin({csv_file.folder, csv_file.name}, '\'));         %Create a table with csv file info
+    wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
+    run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
+    wrk_dir(8:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
+    csv_path = sprintf('%s%scsv_files%s%s-%s*.csv', strjoin(wrk_dir, filesep) ...
+        , filesep, filesep, char(run_info{1}), ...
+        char(run_info{2}));                                                         %Create a search path with a wildcard
+    csv = dir(csv_path);                                                            %Get CSV that corresponds to the bin file's run
+    csv_file=strjoin({csv.folder, csv.name}, filesep);
+    soi_data=readtable(csv_file);         %Create a table with csv file info
     
     
     %FileName = 'Random_music.bin';
