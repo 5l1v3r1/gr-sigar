@@ -16,7 +16,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include <csignal>
 #include <ctime>
 #include <set>
 #include <utility>
@@ -63,18 +63,20 @@ public:
 		m_outcsv(NULL)
 	{
 		ZeroBuffer();
-		create_run_dir(); // Create directory for the IQ files
+		// Create directory for the IQ files, if outcsv is not empty, chech csv directory
+	  create_run_dirs(!outcsv.empty());
 		std::remove("blank.bin.hdr"); // Clean up from initialization of file meta sink
 		std::remove("blank.bin");
+		m_work_done = false;
 		if (!outcsv.empty()) {
-			bool write_csv_header = access(outcsv.c_str(), F_OK) == -1;
-			m_outcsv = fopen(outcsv.c_str(), "a+");
+			bool write_csv_header = access((m_run_info + outcsv).c_str(), F_OK) == -1;
+			m_outcsv = fopen((m_csv_dir+m_run_info+outcsv).c_str(), "a+");
 			if (!m_outcsv) {
 				fprintf(stderr, "[-] Error opening output CSV file %s\n", outcsv.c_str());
 				exit(1);
 			}
 			if (write_csv_header) {
-				fprintf(m_outcsv, "time,frequency_mhz,width_khz,peak,dif,filename\n");
+				fprintf(m_outcsv, "time,frequency_mhz,width_khz,peak,dif,filename,mod_type\n");
 				fflush(m_outcsv);
 			}
 		}
@@ -94,7 +96,28 @@ private:
 			ProcessVector(static_cast<const float *>(input_items[0]) + i * m_vector_length);
 
 		consume_each(ninput_items[0]);
-		return 0;
+		if (m_work_done)
+		{
+			/*Returning -1 signals to the gnuradio scheduler that all work is done.
+				Doing so will cleanly shutdown the flow graph, exit normally, and bring
+				about world peace. However, because there is a fork in the connections,
+				one path goes to a file sink and one to a this sink, gnuradio can't
+				handle propagating the WORK_DONE signal to the other branch and a
+				segfault occurs. This entire API is held together with duct tape and
+				wishful thinking. I mean holy hell, how friggin hard is it to exit a
+				process cleanly? And all the scheduler would have to do is pass WORK_DONE
+				to the top_block and then the top_block would immediately discconect the
+				blocks. *MINDBLOWN* Where's my Nobel, because clearly I'm thinking on
+				a totally different level. I'm playing 67D, underwater connect four over
+				here.
+			*/
+			//return -1;
+			return 0;
+		}
+		else
+		{
+			return 0;
+		}
 	}
 
 	void ProcessVector(const float *input)
@@ -119,13 +142,18 @@ private:
 
 		m_count = 0; //next time, we're starting from scratch - so note this
 		ZeroBuffer(); //get ready to start again
-
 		++m_wait_count; //we've just done another listen
 		if (m_time / (m_bandwidth0 / static_cast<double>(m_vector_length * m_avg_size)) <= m_wait_count) { //if we should move to the next frequency
 			for (;;) { //keep moving to the next frequency until we get to one we can listen on (copes with holes in the tunable range)
 				if (m_centre_freq_2 <= m_centre_freq_1) { //we reached the end!
 					fprintf(stderr, "\n[*] Finished scanning\n"); //say we're exiting
-					exit(0); //TODO: This probably isn't the right thing, but it'll do for now
+					m_work_done = true;
+					//break;
+					/*Ham-fisted, bull-in-a-china-shop solution to closing because
+						gnuradio wants to crush any remaining hope out of your pathetic
+						existence.
+					*/
+					exit(0);
 				}
 				m_centre_freq_1 += m_step; //calculate the frequency we should change to
 				double actual = m_source->set_center_freq(m_centre_freq_1); //change frequency
@@ -264,39 +292,48 @@ private:
 		strftime(time_stamp, 7, "%H%M%S", tm_info);
 		// Record IQ data and return name of file
 		std::string filename = RecordIQ(freq, width, time_stamp);
-		fprintf(m_outcsv, "%s,%f,%f,%f,%f,%s\n", buf, freq, width, peak, diff, filename.c_str());
+		fprintf(m_outcsv, "%s,%f,%f,%f,%f,%s,%s\n", buf, freq, width, peak, diff, filename.c_str(), "unk");
 		fflush(m_outcsv);
 	}
 
-	void create_run_dir()
-	{
-		char dat[10]; // Date
-		char ts[7];   // time stamp
-		strftime(dat, 10, "%d%b%Y", localtime(&m_start_time)); // Format date
-		strftime(ts, 7, "%H%M%S", localtime(&m_start_time));   // Format time stamp
-
-		std::string bin_dir = "bin_files";              // Main directory
-		std::string soi_dir = "/SOI_";                 // Daily runs
-		soi_dir.append(dat);                                 // Append date
-		std::string run_dir = "/run_";                 // Individual run directory
-		run_dir.append(ts);                                  // append time stamp
-		m_iq_dir = bin_dir + soi_dir + run_dir + "/";  // Complete file path
-
-    // Check to see if daily directory exists
-		if (!std::experimental::filesystem::is_directory(bin_dir + soi_dir))
+	void create_run_dirs(bool csv)
 		{
-			// Make sure main directory exists
-			if(!std::experimental::filesystem::is_directory(bin_dir))
+			char dat[10]; // Date
+			char ts[7];   // time stamp
+			strftime(dat, 10, "%d%b%Y", localtime(&m_start_time)); // Format date
+			strftime(ts, 7, "%H%M%S", localtime(&m_start_time));   // Format time stamp
+
+			std::string bin_dir = "bin_files";              					 // Main bin directory
+			m_csv_dir = "csv_files/";																	 // Directory for CSV file
+			std::string soi_dir = "SOI_";                 						// Daily runs
+			soi_dir.append(dat);                           						// Append date
+			std::string run_dir = "run_";                 						// Individual run directory
+			run_dir.append(ts);                            						// append time stamp
+			m_iq_dir = bin_dir + "/" + soi_dir + "/" + run_dir + "/"; // Complete file path
+			m_run_info = soi_dir + "-" + run_dir + "-";								// CSV file prefix
+
+	    // Check to see if daily directory exists
+			if (!std::experimental::filesystem::is_directory(bin_dir + "/" + soi_dir))
 			{
-				// Create main directory if absent
-				std::experimental::filesystem::create_directory(bin_dir);
+				// Make sure main directory exists
+				if(!std::experimental::filesystem::is_directory(bin_dir))
+				{
+					// Create main directory if absent
+					std::experimental::filesystem::create_directory(bin_dir);
+				}
+				// Create daily directory if absent
+				std::experimental::filesystem::create_directory(bin_dir + "/" +soi_dir);
 			}
-			// Create daily directory if absent
-			std::experimental::filesystem::create_directory(bin_dir + soi_dir);
+			// Create run directory
+			std::experimental::filesystem::create_directory(m_iq_dir);
+
+			// csv will be true if an output csv file was specified, so we should check
+			// the existence of the csv_directory
+			if ((csv) && (!std::experimental::filesystem::is_directory(m_csv_dir)))
+			{
+				std::experimental::filesystem::create_directory(m_csv_dir);
+			}
 		}
-		// Create run directory
-		std::experimental::filesystem::create_directory(m_iq_dir);
-	}
 
 	std::string RecordIQ(float frq, float bw, char clk_time[7])
 	{
@@ -314,7 +351,10 @@ private:
 		return (file_name+".bin");                // Return filename
 	}
 
+	bool m_work_done;
 	std::string m_iq_dir;
+	std::string m_csv_dir;
+	std::string m_run_info;
 	std::set<double> m_signals;
 	osmosdr::source::sptr m_source;
 	float *m_buffer;
