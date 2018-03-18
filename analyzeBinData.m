@@ -300,7 +300,7 @@ function rec_mod_type(mod_type, IF)
     soi_data.mod_type{soi_index} = mod_type;
 end
 
-%% Measures basic statistical values for data contained in vector freqInfo LOLOLOL
+%% Measures basic statistical values for data contained in vector freqInfo
 % and returns the frequency where the max value was found, the mean, the 
 % mode and the variance
 % xAxis represents the frequency values
