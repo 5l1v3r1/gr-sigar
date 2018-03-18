@@ -11,6 +11,9 @@ init_prompt = ['What do you want to do?\n\n'...
  
  global soi_data;
  global csv_file;
+ global freqData;
+ mod_tyepe={};
+ freqData=[];
  %gr-scan variable options
  %'CSV output file name; no extension (required)'
  gr_prompt = {'FFT samples to average (default: 1000)'
@@ -93,6 +96,7 @@ while true
             if isempty(out_filename)
                 out_filename = '.csv';
             end
+            %Add file checking
             command=['./gr-scan ', options, ' -o ', out_filename(2:end), '.csv'];
             
             %status could be used to tell if gr-scan breaks or not, but
@@ -102,11 +106,10 @@ while true
  
         case 'analysis'
             %specify file(s) to analyze
-            get_file
-            %*******************************Add error handling in case the above fails*******************************
-            %Write to file one time
-            writetable(soi_data, csv_file,'QuoteStrings',true);
-            
+            %*******************************Add error handling in case this fails*******************************
+            [mType, int_freq] = get_file;
+
+         
         case 'exit'
             %exit is the only command that actually brreaks the input loop
             break
@@ -115,10 +118,24 @@ while true
             %Handling for unkown options
             fprintf('\nCommand not recognized!\n\n')
     end
+    
+    %Write to file one time
+    rec_mod_type(det_modtype(mType), int_freq);
+    writetable(soi_data, csv_file,'QuoteStrings',true);
+end
+
+%% Determine mod type (protoytype)
+function [mt]=det_modtype(mod_FM)
+    
+    if mod_FM==true
+        mt={'FM'};
+    else
+        mt={'Not FM'};
+    end
 end
 
 %% Let user pick files
-function get_file
+function [mod_FM, IF] = get_file
     % Obtains data from file
     % gets data from the binary file created by gr-scan
     % ****add algorithm that looks thtough a folder and pulls data one file at
@@ -138,16 +155,19 @@ function get_file
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
     
-    wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
-    run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
-    wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
-    csv_path = sprintf('%s%scsv_files%s%s-%s*.csv', strjoin(wrk_dir, filesep) ...
-        , filesep, filesep, char(run_info{1}), ...
-        char(run_info{2}));                                                         %Create a search path with a wildcard
-    csv = dir(csv_path);                                                            %Get CSV that corresponds to the bin file's run
-    csv_file=strjoin({csv.folder, csv.name}, filesep);
-    soi_data=readtable(csv_file);         %Create a table with csv file info
-    
+    if iscellstr(FileName) || ischar(FileName)
+        wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
+        run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
+        wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
+        csv_path = sprintf('%s%scsv_files%s%s-%s*.csv', strjoin(wrk_dir, filesep) ...
+            , filesep, filesep, char(run_info{1}), ...
+            char(run_info{2}));                                                         %Create a search path with a wildcard
+        csv = dir(csv_path);                                                            %Get CSV that corresponds to the bin file's run
+        csv_file=strjoin({csv.folder, csv.name}, filesep);
+        soi_data=readtable(csv_file);         %Create a table with csv file info
+    else
+        return
+    end
     
     %FileName = 'Random_music.bin';
     %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
@@ -159,7 +179,7 @@ function get_file
         %If FileName is a cell string, iterate through indexes for analysis
         for i=1:numel(FileName)
             [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
-            freq_analysis(data, Fs, IF)
+            mod_FM = is_FM(data, Fs, IF);
             %Create a new figure for next interation
             if i~= numel(FileName)
                 figure
@@ -168,7 +188,7 @@ function get_file
     elseif ischar(FileName)
         %Only one file was chosen, no loop required
         [data, Fs, IF]=GetBinData(PathName, FileName);
-        freq_analysis(data, Fs, IF, FileName)
+        mod_FM = is_FM(data, Fs, IF, FileName);
     end
     
     % Add opening CSV; file will need to be imported. CSV
@@ -180,11 +200,10 @@ function get_file
 end
 
 %% frequency analysis***
-function freq_analysis(data, Fs, IF, FileName) 
+function [mod_type] = is_FM(data, Fs, IF, FileName) 
     % this area will be a function that will return modulation type
-    
-    global soi_data;
-    global csv_file;
+   
+    global freqData;
     
     L=length(data);             %total number of samples recorded.
     
@@ -264,13 +283,17 @@ function freq_analysis(data, Fs, IF, FileName)
         
         %make sure the units work.
         fprintf('Signal at %0.4f MHz is frequency modulated\n\n', IF/1e6)
-        mod_type={'Frequency Modulation'};
+        mod_type=true;
     else
         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
-        mod_type={'Not Frequency Modulation'};
+        mod_type=false;
     end
+end
+
+function rec_mod_type(mod_type, IF)
+    global soi_data
     
-    % Find index of current freq
+     % Find index of current freq
     soi_index=(soi_data.frequency_mhz==IF/1e6);
 
     % Add entry for determined mod type
