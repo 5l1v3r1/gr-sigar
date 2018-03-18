@@ -16,6 +16,7 @@ init_prompt = ['What do you want to do?\n\n'...
  
  mod_tyepe={};
  freqData=[];
+ freqMax=[];
  %gr-scan variable options
  %'CSV output file name; no extension (required)'
  gr_prompt = {'FFT samples to average (default: 1000)'
@@ -241,7 +242,7 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         % ****uncomment from here when plots are needed****************
         subplot(3,1,1)
         plot(x_Hz,abs(freqData))
-        title("Signal's FFT")
+        title("Signal's FFT. " + c + " out of " + k)
         %data for time domain plot
         subplot(3,1,2)
         timedata = (data(w*(c-1)+1:w*c));
