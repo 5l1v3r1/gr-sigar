@@ -8,7 +8,7 @@ init_prompt = ['What do you want to do?\n\n'...
         'gr-scan:       Run gr-scan\n'...
         'analysis:      Search for bin/dat file(s) to analyze\n'...
         'exit\n> '];
- 
+
  global soi_data;
  global csv_file;
  global freqData;
@@ -32,22 +32,22 @@ init_prompt = ['What do you want to do?\n\n'...
  title = 'gr-scan options (leave blank for defaults)';
  %Dimension for text boxes
  dims = [1 65];
- 
+
 while true
     %Get user input for what to do
     usr_in=input(init_prompt, 's');
     switch usr_in
         case 'gr-scan'
             gr_vars=inputdlg(gr_prompt, title, dims);
-            
+
             %Cancel button clicked: skip to next loop iteration
             if isempty(gr_vars)
                 continue
             end
-            
+
             %Use loop to check value validity and build commad options
             i = 1;
-            %A while loop was selected so that the loop could be reset and 
+            %A while loop was selected so that the loop could be reset and
             %the dialog could be recalled with the current user values.
             while i < length(gr_flags)+1
                 %If the user hits cancel after an error, gr_vars will be
@@ -57,7 +57,7 @@ while true
                 end
                 %str2double doesn't return a status code
                 [num, stat] = str2num(gr_vars{i}); %#ok<ST2NM>
-                
+
                 %If number conversion fails, we aren't checking the
                 %filename, and the field isn't blank
                 if (stat == 0) && (gr_vars{i} ~= "")
@@ -78,7 +78,7 @@ while true
             if isempty(gr_vars)
                 continue
             end
-            
+
             options=[];
             %Create options string for calling gr-scan with specified
             %parameters
@@ -89,36 +89,36 @@ while true
                     otherwise           %Add flag and value to options string
                         out_filename = [out_filename, strtrim(gr_flags{i}), gr_vars{i}]; %#ok<AGROW>
                         options = [options, gr_flags{i}, gr_vars{i}]; %#ok<AGROW>
-                end 
+                end
             end
-            
+
             %create final command
             if isempty(out_filename)
                 out_filename = '.csv';
             end
             %Add file checking
             command=['./gr-scan ', options, ' -o ', out_filename(2:end), '.csv'];
-            
+
             %status could be used to tell if gr-scan breaks or not, but
-            %gr-scan cannot be closed cleanly. 
+            %gr-scan cannot be closed cleanly.
             [status, cmdout] = unix(command, '-echo');
             %[status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
- 
+
         case 'analysis'
             %specify file(s) to analyze
             %*******************************Add error handling in case this fails*******************************
             [mType, int_freq] = get_file;
 
-         
+
         case 'exit'
             %exit is the only command that actually brreaks the input loop
             break
-            
+
         otherwise
             %Handling for unkown options
             fprintf('\nCommand not recognized!\n\n')
     end
-    
+
     %Write to file one time
     if ~isempty(mType) && ~isempty(int_freq)
         rec_mod_type(det_modtype(mType), int_freq);
@@ -128,7 +128,7 @@ end
 
 %% Determine mod type (protoytype)
 function [mt]=det_modtype(mod_FM)
-    
+
     if mod_FM==true
         mt={'FM'};
     else
@@ -151,12 +151,12 @@ function [mod_FM, IF] = get_file
     %     calls the frequency analysis function(it will return modulation type)
     %     stores data in the .csv file next to its corresponding entry
     % end
-    
+
     global soi_data;
     global csv_file;
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
-    
+
     if iscellstr(FileName) || ischar(FileName)
         wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
         run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
@@ -168,11 +168,12 @@ function [mod_FM, IF] = get_file
         csv_file=strjoin({csv.folder, csv.name}, filesep);
         soi_data=readtable(csv_file);         %Create a table with csv file info
     else
+        %Handle if user hit cancel
         mod_FM = [];
         IF = [];
         return
     end
-    
+
     %FileName = 'Random_music.bin';
     %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
 
@@ -194,27 +195,27 @@ function [mod_FM, IF] = get_file
         [data, Fs, IF]=GetBinData(PathName, FileName);
         mod_FM = is_FM(data, Fs, IF, FileName);
     end
-    
+
     % Add opening CSV; file will need to be imported. CSV
     % file saving should include directory info so that choosing a random
     % bin file will import the appropriate CSV file for saving.
-    
+
     %[data, Fs, IF]=GetBinData('C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\Random_music.bin');%gets I/Q data,sample frequency, and IF
 
 end
 
 %% frequency analysis***
-function [mod_type] = is_FM(data, Fs, IF, FileName) 
+function [mod_type] = is_FM(data, Fs, IF, FileName)
     % this area will be a function that will return modulation type
-   
+
     global freqData;
-    
+
     L=length(data);             %total number of samples recorded.
-    
+
     %Is this needed?
     duration=L/Fs;              %determines the total duration of the signal in seconds
 
-    w = 1000;                     %using an arbitrary window size for now. Line below will be used.                    
+    w = 1000;                     %using an arbitrary window size for now. Line below will be used.
     %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
     x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
     k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
@@ -231,14 +232,14 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
 
     % these vectors will store the statisical values of the FFT's for signal
     % evaluation
-    freqMax=zeros(k,1);       
+    freqMax=zeros(k,1);
     freqMean=zeros(k,1);
     freqMode=zeros(k,1);
     freqVariance=zeros(k,1);
-    
+
     for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
         freqData= fft(data((c*w):end),w);
-   
+
         % ****uncomment from here when plots are needed****************
         subplot(3,1,1)
         plot(x_Hz,abs(freqData))
@@ -249,21 +250,21 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         x = (1:1:w)*(c/Fs);
         plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
         title("Signal in time domain")
-   
+
         subplot(3,1,3)
         plot(timedata)
         title("Signal I/Q components")
         %pause
         % ****uncomment until here when plots are not needed****************
-   
+
         indices=find(abs(freqData)>threshold);
-        
+
         %Are these required?
         freqData2=freqData(indices);
         x_Hz2=x_Hz(indices);
-        
+
         %plot(x_Hz2,abs(freqData2))
-   
+
         [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
         %these 3 lines below allow us to use the data without the lower values
         %if isempty(freqData2)==0
@@ -272,19 +273,19 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         %plot(x_Hz(1:300),abs(freqData(1:300)),'b')
     end
 
-    % Evaluates Frequency modulation results 
-    % it measures the standard deviation of the max values obtain above. 
+    % Evaluates Frequency modulation results
+    % it measures the standard deviation of the max values obtain above.
     % if the standard deviation is greated than 20kHz (set arbitrarily due to
-    % the audio frequency limt), then the algorithm estimates that the signal 
+    % the audio frequency limt), then the algorithm estimates that the signal
     % is FM. **Needs to use other parameters to confirm (Mean, Mode, etc)**
     % This is a temporary solution and the real modulation detection will use
     % the ratio (R) of the variance of the envelope ot the square of the mean
     % of the envelope. See Identification of the Modulation Type of a Signal by
     % Y. T. Chann
-    
+
     if std(freqMax)>20 * std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
         %msgbox('Signal is frequency modulated')
-        
+
         %make sure the units work.
         fprintf('Signal at %0.4f MHz is frequency modulated\n\n', IF/1e6)
         mod_type=true;
@@ -296,7 +297,7 @@ end
 
 function rec_mod_type(mod_type, IF)
     global soi_data
-    
+
      % Find index of current freq
     soi_index=(soi_data.frequency_mhz==IF/1e6);
 
@@ -305,20 +306,20 @@ function rec_mod_type(mod_type, IF)
 end
 
 %% Measures basic statistical values for data contained in vector freqInfo
-% and returns the frequency where the max value was found, the mean, the 
+% and returns the frequency where the max value was found, the mean, the
 % mode and the variance
 % xAxis represents the frequency values
 function [maximum, meanValue, modeValue, variance]=getStatsData(freqInfo, xAxis)
     %maxIndex = find(freqInfo == max(freqInfo(:)));
     %maximum = xAxis(maxIndex);  %stores frequency where the max value was found
-    
+
     %The below removes the warning about indexed variabels and is a little
     %faster. However; it may impact detection.
     maximum = xAxis(freqInfo == max(freqInfo(:)));
     meanValue = mean(freqInfo); %this value is not being use as of right now
     modeValue = 0;              %requires work
     variance =var(freqInfo);    %this value is not being use as of right now
-end 
+end
 
 %% Will be used for signal detection (backup to gr-scan)
 % Use this average to determine how many signals are present in the bin
@@ -329,9 +330,9 @@ end
 %     TempFreqData=AvgfreqData/counter;
 %     plot(x_Hz(2:end),abs(TempFreqData(2:end)))
 %     pause
-% end    
+% end
 
-%% This function takes as an input a binary file that contains I/Q data and 
+%% This function takes as an input a binary file that contains I/Q data and
 % returns the data in complex form. It also returns sample rate (Fs) and
 % Intermediate frequency IF (frequency that LO was set when data was
 % captured) *****It still requires the changes that Hunter made to extract
@@ -339,9 +340,9 @@ end
 function [data, Fs, IF]=GetBinData(filePath, fileName)
     fileID=fopen([filePath, fileName], 'r');
     data = fread(fileID,'float32');
-    data = data(1:2:end) +1i*data(2:2:end); %represents data as f=I+jQ 
+    data = data(1:2:end) +1i*data(2:2:end); %represents data as f=I+jQ
     fclose(fileID);
-    
+
     % Extracts data from file name
     try
         info=strsplit(fileName, {'-', '_'});
@@ -357,5 +358,5 @@ function [data, Fs, IF]=GetBinData(filePath, fileName)
     end
     %Eliminates the DC component using the mean value
     data = data-mean(data);
-    
+
 end
