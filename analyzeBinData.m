@@ -120,8 +120,10 @@ while true
     end
     
     %Write to file one time
-    rec_mod_type(det_modtype(mType), int_freq);
-    writetable(soi_data, csv_file,'QuoteStrings',true);
+    if ~isempty(mType) && ~isempty(int_freq)
+        rec_mod_type(det_modtype(mType), int_freq);
+        writetable(soi_data, csv_file,'QuoteStrings',true);
+    end
 end
 
 %% Determine mod type (protoytype)
@@ -166,6 +168,8 @@ function [mod_FM, IF] = get_file
         csv_file=strjoin({csv.folder, csv.name}, filesep);
         soi_data=readtable(csv_file);         %Create a table with csv file info
     else
+        mod_FM = [];
+        IF = [];
         return
     end
     
