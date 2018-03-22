@@ -1,2 +1,0 @@
-time,frequency_mhz,width_khz,peak,dif,filename,mod_type
-20180321_001211,106.100632,26.624655,-56.926838,14.793743,bin_files/SOI_21Mar2018/run_001205/106.100632-26.624655_001211.bin,unk
