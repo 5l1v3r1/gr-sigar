@@ -16,8 +16,9 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <csignal>
 #include <ctime>
+#include <chrono>
+#include <thread>
 #include <set>
 #include <utility>
 #include <vector>
@@ -230,7 +231,7 @@ private:
 
 		/* check to see if the signal is close to any other (the same signal often appears with a slightly different centre frequency) */
 		BOOST_FOREACH (double signal, m_signals){
-			if ((mid - signal < m_spread) && (signal - mid < m_spread)) //tpo close
+			if ((mid - signal < m_spread) && (signal - mid < m_spread)) //too close
 				return false; //if so, this is not a genuine hit
 		}
 
@@ -261,7 +262,7 @@ private:
 			bands[i] = 0.0;
 
 		for (unsigned int i = 0; i < m_vector_length; ++i){ //over the entire FFT
-			//make the buffer contains the entire window
+			//make sure the buffer contains the entire window
 			if ((i >= bandwidth_samples / 2) && (i < m_vector_length + bandwidth_samples / 2 - bandwidth_samples)){
 				for (unsigned int j = 0; j < bandwidth_samples; ++j) //iterate over the window for averaging
 					bands[i + j - bandwidth_samples / 2] += powers[i] / static_cast<float>(bandwidth_samples); //add this sample to the bands
@@ -344,7 +345,7 @@ private:
 		std::string file_name = m_iq_dir + std::to_string(frq) + "-" + std::to_string(bw)+"_";
 		file_name.append(clk_time);               // Append time stamp
 		m_fs->open(file_name + ".bin");           // Tell file sink to open a file
-		sleep(2);                                // Wait two seconts
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));                                // Wait 400ms
 		m_fs->close();                           // Tell file sink to close file
 		m_source->set_sample_rate(m_bandwidth0); // Reset source bw
 		m_thr->set_sample_rate(m_bandwidth0);    // Reset throttle bandwidth
