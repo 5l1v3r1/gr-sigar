@@ -119,7 +119,7 @@ while true
             fprintf('\nCommand not recognized!\n\n')
     end
 
-    %Write to file one time
+    %Write to file, unless no file was selected
     if ~isempty(mType) && ~isempty(int_freq)
         rec_mod_type(det_modtype(mType), int_freq);
         writetable(soi_data, csv_file,'QuoteStrings',true);
