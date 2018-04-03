@@ -169,7 +169,7 @@ function [mod_FM, IF] = evaluateSignal
     %FileName to be a cell
     if iscellstr(FileName)
         %If FileName is a cell string, iterate through indexes for analysis
-        for i=1:numel(FileName)
+        for i=1:numel(FileName) 
             [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
             mod_FM = is_FM(data, Fs, IF);
             %Create a new figure for next interation
@@ -292,20 +292,10 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         %pause
         % ****uncomment until here when plots are not needed****************
 
-        indices=find(abs(freqData)>threshold);
-
-        %Are these required?
-        freqData2=freqData(indices);
-        x_Hz2=x_Hz(indices);
-
         %plot(x_Hz2,abs(freqData2))
 
         [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
-        %these 3 lines below allow us to use the data without the lower values
-        %if isempty(freqData2)==0
-        %     [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData2, x_Hz2);
-        %end
-        %plot(x_Hz(1:300),abs(freqData(1:300)),'b')
+
     end
 
     % Evaluates Frequency modulation results
@@ -319,8 +309,6 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
     % Y. T. Chann
 
     if std(freqMax)>20 && std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
-        %msgbox('Signal is frequency modulated')
-
         %make sure the units work.
         fprintf('Signal at %0.4f MHz is frequency modulated\n\n', IF/1e6)
         mod_type=true;
