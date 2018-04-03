@@ -14,7 +14,7 @@ init_prompt = ['What do you want to do?\n\n'...
  global freqData;
  global freqMax;    %added in order to evaluate data after frequency analysis is completed
  
- mod_tyepe={};
+ mod_type={};
  freqData=[];
  freqMax=[];
  %gr-scan variable options
@@ -110,7 +110,7 @@ while true
         case 'analysis'
             %specify file(s) to analyze
             %*******************************Add error handling in case this fails*******************************
-            [mType, int_freq] = get_file;
+            [modType, int_freq] = analyzeFile;
 
          
         case 'exit'
@@ -123,7 +123,7 @@ while true
     end
     
     %Write to file one time
-    rec_mod_type(det_modtype(mType), int_freq);
+    rec_mod_type(det_modtype(modType), int_freq);
     writetable(soi_data, csv_file,'QuoteStrings',true);
 end
 
@@ -137,8 +137,8 @@ function [mt]=det_modtype(mod_FM)
     end
 end
 
-%% Let user pick files
-function [mod_FM, IF] = get_file
+%% Let user pick files (a funtion called get_file should not return a modulation type)
+function [mod_FM, IF] = analyzeFile %Changed name to match its function//GS
     % Obtains data from file
     % gets data from the binary file created by gr-scan
     % ****add algorithm that looks thtough a folder and pulls data one file at
@@ -161,7 +161,7 @@ function [mod_FM, IF] = get_file
     if iscellstr(FileName) || ischar(FileName)
         wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
         run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
-        wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
+        wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                  %Clear the path name back to gr-scan directory
         csv_path = sprintf('%s%scsv_files%s%s-%s*.csv', strjoin(wrk_dir, filesep) ...
             , filesep, filesep, char(run_info{1}), ...
             char(run_info{2}));                                                         %Create a search path with a wildcard
@@ -172,9 +172,6 @@ function [mod_FM, IF] = get_file
         return
     end
     
-    %FileName = 'Random_music.bin';
-    %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
-
     %FileName = 0 if user hits cancel
     %Easier to determine type in two different cases as opposed to forcing
     %FileName to be a cell
@@ -203,7 +200,7 @@ function [mod_FM, IF] = get_file
 end
 
 %% frequency analysis***
-function [mod_type] = is_FM(data, Fs, IF, FileName) 
+function [mod_type] = freqAnalysis(data, Fs, IF, FileName) 
     % this area will be a function that will return modulation type
    
     global freqData;
@@ -240,20 +237,20 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         freqData= fft(data((c*w):end),w);
    
         % ****uncomment from here when plots are needed****************
-        subplot(3,1,1)
-        plot(x_Hz,abs(freqData))
-        title("Signal's FFT. " + c + " out of " + k)
-        %data for time domain plot
-        subplot(3,1,2)
-        timedata = (data(w*(c-1)+1:w*c));
-        x = (1:1:w)*(c/Fs);
-        plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
-        title("Signal in time domain")
-   
-        subplot(3,1,3)
-        plot(timedata)
-        title("Signal I/Q components")
-        %pause
+%         subplot(3,1,1)
+%         plot(x_Hz,abs(freqData))
+%         title("Signal's FFT. " + c + " out of " + k)
+%         %data for time domain plot
+%         subplot(3,1,2)
+%         timedata = (data(w*(c-1)+1:w*c));
+%         x = (1:1:w)*(c/Fs);
+%         plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
+%         title("Signal in time domain")
+%    
+%         subplot(3,1,3)
+%         plot(timedata)
+%         title("Signal I/Q components")
+%         pause
         % ****uncomment until here when plots are not needed****************
    
         indices=find(abs(freqData)>threshold);
@@ -314,6 +311,120 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
 %     end
 end
 
+
+%% frequency analysis***
+function [mod_type] = is_FM(data, Fs, IF, FileName) 
+    % this area will be a function that will return modulation type
+   
+    global freqData;
+    global freqMax; 
+    
+    L=length(data);             %total number of samples recorded.
+    
+    %Is this needed?
+    duration=L/Fs;              %determines the total duration of the signal in seconds
+
+    w = 1000;                     %using an arbitrary window size for now. Line below will be used.                    
+    %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
+    x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
+    k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
+    %k = 150;                    % setting the value to 150 temporarily...might cause errors
+    %freqData=fft(data,w);       %stores frequency info for the values in the first window
+
+    % calculates threshold
+    % freqData= fft(data(Fs*25:end),w);
+    % threshold = 1.5 * mean(abs(freqData));  %sets the threshold to 1.5 times the value of the overall mean
+    % clear freqData'
+    threshold = 0.6;  % the lines above have an error for the threshold. Not being used yet. will be used for signal detection
+
+    set(gca,'YScale','log')
+
+    % these vectors will store the statisical values of the FFT's for signal
+    % evaluation
+    freqMax=zeros(k,1);       
+    freqMean=zeros(k,1);
+    freqMode=zeros(k,1);
+    freqVariance=zeros(k,1);
+    
+    for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
+        freqData= fft(data((c*w):end),w);
+   
+        % ****uncomment from here when plots are needed****************
+%         subplot(3,1,1)
+%         plot(x_Hz,abs(freqData))
+%         title("Signal's FFT. " + c + " out of " + k)
+%         %data for time domain plot
+%         subplot(3,1,2)
+%         timedata = (data(w*(c-1)+1:w*c));
+%         x = (1:1:w)*(c/Fs);
+%         plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
+%         title("Signal in time domain")
+%    
+%         subplot(3,1,3)
+%         plot(timedata)
+%         title("Signal I/Q components")
+%         pause
+        % ****uncomment until here when plots are not needed****************
+   
+        indices=find(abs(freqData)>threshold);
+        
+        %Are these required?
+        freqData2=freqData(indices);
+        x_Hz2=x_Hz(indices);
+        
+        %plot(x_Hz2,abs(freqData2))
+   
+        [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
+        %these 3 lines below allow us to use the data without the lower values
+        %if isempty(freqData2)==0
+        %     [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData2, x_Hz2);
+        %end
+        %plot(x_Hz(1:300),abs(freqData(1:300)),'b')
+    end
+
+    % Evaluates Frequency modulation results 
+    % it measures the standard deviation of the max values obtain above. 
+    % if the standard deviation is greated than 20kHz (set arbitrarily due to
+    % the audio frequency limt), then the algorithm estimates that the signal 
+    % is FM. **Needs to use other parameters to confirm (Mean, Mode, etc)**
+    % This is a temporary solution and the real modulation detection will use
+    % the ratio (R) of the variance of the envelope ot the square of the mean
+    % of the envelope. See Identification of the Modulation Type of a Signal by
+    % Y. T. Chann
+    
+    % the following for loop evaluates the standard deviation of the
+    % frequency where the max value over 10 different sections of the
+    % signal. If the majority of the results concur (5 or more), then, the
+    % script will return a positive for Freq modulation
+    chunkSize = fix(length(freqMax)/10);
+    isFM=0;
+    for c= 1:10
+        stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
+        if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
+            isFM=isFM+1;
+        end 
+    end
+    if isFM>5           % if > 5 out of 10 freqMax sections meet the variation rqmnt, signal is FM 
+        fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, isFM*10)
+        mod_type=true;
+    else
+        fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
+        mod_type=false;
+    end
+    
+%     if std(freqMax)>20 * std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
+%         %msgbox('Signal is frequency modulated')
+%         
+%         %make sure the units work.
+%         fprintf('Signal at %0.4f MHz is frequency modulated\n\n', IF/1e6)
+%         mod_type=true;
+%     else
+%         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
+%         mod_type=false;
+%     end
+end
+
+
 function rec_mod_type(mod_type, IF)
     global soi_data
     
@@ -322,6 +433,25 @@ function rec_mod_type(mod_type, IF)
 
     % Add entry for determined mod type
     soi_data.mod_type{soi_index} = mod_type;
+end
+
+%% Determines whether a signal is AM
+ % needs to run after is_FM because it uses vector freqMax 
+function [mod_type] = is_AM(data, Fs, IF, FileName) 
+    for c= 1:10
+        stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
+        if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
+            isFM=isFM+1;
+        end 
+    end
+    if isFM>5           % if > 5 out of 10 freqMax sections meet the variation rqmnt, signal is FM 
+        fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, isFM*10)
+        mod_type=true;
+    else
+        fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
+        mod_type=false;
+    end
+
 end
 
 %% Measures basic statistical values for data contained in vector freqInfo
