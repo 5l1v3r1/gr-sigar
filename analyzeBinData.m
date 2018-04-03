@@ -283,7 +283,7 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
     % of the envelope. See Identification of the Modulation Type of a Signal by
     % Y. T. Chann
 
-    if std(freqMax)>20 * std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
+    if std(freqMax)>20 && std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
         %msgbox('Signal is frequency modulated')
 
         %make sure the units work.
