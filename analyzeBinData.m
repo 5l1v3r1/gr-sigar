@@ -12,7 +12,7 @@ init_prompt = ['What do you want to do?\n\n'...
  global soi_data;
  global csv_file;
  global freqData;
- mod_tyepe={};
+ mod_type={};
  freqData=[];
  %gr-scan variable options
  %'CSV output file name; no extension (required)'
@@ -136,7 +136,7 @@ function [mt]=det_modtype(mod_FM)
     end
 end
 
-%% Let user pick files, performs frequency analysis and determines modulation
+%% Let user pick files, calls frequency analysis function (which determines mod type)
 function [mod_FM, IF] = evaluateSignal
     % Obtains data from file
     % gets data from the binary file(s) created by gr-scan and determines
@@ -163,9 +163,6 @@ function [mod_FM, IF] = evaluateSignal
         IF = [];
         return
     end
-
-    %FileName = 'Random_music.bin';
-    %PathName = 'C:\Users\Guillo\OneDrive\Documents\School Stuff\Spring-18 Classes\EEE489-Senior Year Project\Files\Test Signals\';
 
     %FileName = 0 if user hits cancel
     %Easier to determine type in two different cases as opposed to forcing
@@ -194,6 +191,54 @@ function [mod_FM, IF] = evaluateSignal
 
 end
 
+%% frequency analysis***
+function getFreqStats(data, Fs, IF, FileName)
+    % this area will be a function that will return modulation type
+
+    global freqData;
+
+    L=length(data);             %total number of samples recorded.
+
+    w = 1000;                     %using an arbitrary window size for now. Line below will be used.
+    x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
+    k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
+    %k = 150;                    % setting the value to 150 temporarily...might cause errors
+
+    set(gca,'YScale','log')
+
+    % these vectors will store the statisical values of the FFT's for signal
+    % evaluation
+    freqMax=zeros(k,1);
+    freqMean=zeros(k,1);
+    freqMode=zeros(k,1);
+    freqVariance=zeros(k,1);
+
+    for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
+        freqData= fft(data((c*w):end),w);
+
+        % ****uncomment from here when plots are needed****************
+        subplot(3,1,1)
+        plot(x_Hz,abs(freqData))
+        title("Signal's FFT")
+        %data for time domain plot
+        subplot(3,1,2)
+        timedata = (data(w*(c-1)+1:w*c));
+        x = (1:1:w)*(c/Fs);
+        plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
+        title("Signal in time domain")
+
+        subplot(3,1,3)
+        plot(timedata)
+        title("Signal I/Q components")
+        %pause
+        % ****uncomment until here when plots are not needed****************
+
+        [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
+        
+        mod_FM
+        
+    end
+end
 %% frequency analysis***
 function [mod_type] = is_FM(data, Fs, IF, FileName)
     % this area will be a function that will return modulation type
