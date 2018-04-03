@@ -171,7 +171,14 @@ function [mod_FM, IF] = evaluateSignal
         %If FileName is a cell string, iterate through indexes for analysis
         for i=1:numel(FileName) 
             [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
+            
+            % **  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
+            % **  mod_FM = is_FM(freqMax, IF); Change line below to this
             mod_FM = is_FM(data, Fs, IF);
+            
+            % ** if mod_FM == false then
+            % **    mod_AM = is_AM(freqMax, freqMaxValue)
+            
             %Create a new figure for next interation
             if i~= numel(FileName)
                 figure
@@ -192,7 +199,7 @@ function [mod_FM, IF] = evaluateSignal
 end
 
 %% frequency analysis***
-function getFreqStats(data, Fs, IF, FileName)
+function freqAnalysis(data, Fs, IF, FileName)
     % this area will be a function that will return modulation type
 
     global freqData;
@@ -233,9 +240,8 @@ function getFreqStats(data, Fs, IF, FileName)
         %pause
         % ****uncomment until here when plots are not needed****************
 
+        % ** Make the function return the values below
         [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
-        
-        mod_FM
         
     end
 end
