@@ -107,7 +107,7 @@ while true
         case 'analysis'
             %specify file(s) to analyze
             %*******************************Add error handling in case this fails*******************************
-            [mType, int_freq] = get_file;
+            [mType, int_freq] = evaluateSignal;
 
 
         case 'exit'
@@ -136,21 +136,11 @@ function [mt]=det_modtype(mod_FM)
     end
 end
 
-%% Let user pick files
-function [mod_FM, IF] = get_file
+%% Let user pick files, performs frequency analysis and determines modulation
+function [mod_FM, IF] = evaluateSignal
     % Obtains data from file
-    % gets data from the binary file created by gr-scan
-    % ****add algorithm that looks thtough a folder and pulls data one file at
-    % time. This will eventually call the function that will do the frequency
-    % analysis, and write the type of modulation to the .csv file that was
-    % created when gr-scan was used.
-
-    % ***Basic structure of future loop
-    % for x many files in the folder
-    %     get I/Q data (see get data area below)
-    %     calls the frequency analysis function(it will return modulation type)
-    %     stores data in the .csv file next to its corresponding entry
-    % end
+    % gets data from the binary file(s) created by gr-scan and determines
+    % modulation type
 
     global soi_data;
     global csv_file;
