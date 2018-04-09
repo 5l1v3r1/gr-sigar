@@ -314,9 +314,20 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
     % of the envelope. See Identification of the Modulation Type of a Signal by
     % Y. T. Chann
 
-    if std(freqMax)>20 && std(freqMax)<20e3      %Common audio frequencies vary between 20Hz to 20kHz
-        %make sure the units work.
-        fprintf('Signal at %0.4f MHz is frequency modulated\n\n', IF/1e6)
+    % the following for loop evaluates the standard deviation of the
+    % frequency where the max value over 10 different sections of the
+    % signal. If the majority of the results concur (5 or more), then, the
+    % script will return a positive for Freq modulation
+    chunkSize = fix(length(freqMax)/10);
+    isFM=0;
+    for c= 1:10
+        stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
+        if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
+            isFM=isFM+1;
+        end 
+    end
+    if isFM>5           % if > 5 out of 10 freqMax sections meet the variation rqmnt, signal is FM 
+        fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, isFM*10)
         mod_type=true;
     else
         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
@@ -324,6 +335,33 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
     end
 end
 
+%% Determines if a signal is AM (Returns 'true if it is)
+function [mod_type] = is_AM(freqMax, freqMaxValue, IF, FileName)
+is_AM(freqMax, freqMaxValue)
+
+    % the following for loop evaluates the standard deviation of the
+    % frequency where the max value over 10 different sections of the
+    % signal. If the majority of the results concur (5 or more), then, the
+    % script will return a positive for AM
+    chunkSize = fix(length(freqMax)/10);
+    isFM=0;
+    for c= 1:10
+        stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
+        if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
+            isFM=isFM+1;
+        end 
+    end
+    if isFM>5           % if > 5 out of 10 freqMax sections meet the variation rqmnt, signal is FM 
+        fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, isFM*10)
+        mod_type=true;
+    else
+        fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
+        mod_type=false;
+    end
+
+end
+
+%% I'm not sure what this is for
 function rec_mod_type(mod_type, IF)
     global soi_data
 
