@@ -5,13 +5,11 @@ clear
 
 %% Initial user input
 init_prompt = ['What do you want to do?\n\n'...
-        'gr-scan:       Run gr-scan\n'...
-        'analysis:      Search for bin/dat file(s) to analyze\n'...
-        'exit\n> '];
+        '0:    Run gr-scan\n'...
+        '1:    Search for bin/dat file(s) to analyze\n'...
+        '2:    Exit\n> '];
 
- global soi_data;
- global csv_file;
- global freqData;
+ global soi_data csv_file freqData freqMax
  mod_type={};
  freqData=[];
  %gr-scan variable options
@@ -37,7 +35,11 @@ while true
     %Get user input for what to do
     usr_in=input(init_prompt, 's');
     switch usr_in
-        case 'gr-scan'
+        case '0'
+            if filesep~='/'
+                fprintf('\ngr-scan cannot be run on windows.\n\n')
+                continue
+            end
             gr_vars=inputdlg(gr_prompt, title, dims);
 
             %Cancel button clicked: skip to next loop iteration
@@ -104,13 +106,13 @@ while true
             [status, cmdout] = unix(command, '-echo');
             %[status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
 
-        case 'analysis'
+        case '1'
             %specify file(s) to analyze
             %*******************************Add error handling in case this fails*******************************
             [mType, int_freq] = evaluateSignal;
 
 
-        case 'exit'
+        case '2'
             %exit is the only command that actually brreaks the input loop
             break
 
@@ -142,21 +144,45 @@ function [mod_FM, IF] = evaluateSignal
     % gets data from the binary file(s) created by gr-scan and determines
     % modulation type
 
-    global soi_data;
-    global csv_file;
+    global soi_data  csv_file
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
 
     if iscellstr(FileName) || ischar(FileName)
         wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
         run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
-        wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                                  %Clear the path name back to gr-scan directory
+        wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                  %Clear the path name back to gr-scan directory
         csv_path = sprintf('%s%scsv_files%s%s-%s*.csv', strjoin(wrk_dir, filesep) ...
             , filesep, filesep, char(run_info{1}), ...
             char(run_info{2}));                                                         %Create a search path with a wildcard
         csv = dir(csv_path);                                                            %Get CSV that corresponds to the bin file's run
         csv_file=strjoin({csv.folder, csv.name}, filesep);
-        soi_data=readtable(csv_file);         %Create a table with csv file info
+        alt_csv=sprintf('csv_files/orphan_files.csv');                                 %CSV file for orphan signal files
+        
+        %Check existance of corresponding CSV file
+        if exist(csv_file, 'file') == 2
+            %Create a table with csv file info
+            soi_data=readtable(csv_file);
+        %If no CSV file was found, check for alt_csv
+        elseif exist(alt_csv, 'file') == 2
+            %Define csv_file as alt_csv
+            csv_file=alt_csv;
+            %Read from alt_csv
+            soi_data=readtable(csv_file);
+        %If no csv file is found, make an empty soi_data to write to
+        %alt_csv later
+        else                                               
+            csv_file=alt_csv;
+            %variable names
+            headers = {'time' 'frequency_mhz' 'width_khz' 'peak' 'dif' 'filename' 'mod_type'};
+            %a cell array with numbertts to force matlab to allow numeric
+            %values in appropriate columns
+            data={'' 0 0 0 0 '' ''};
+            %Create table and assign column headers
+            soi_data=cell2table(data);
+            soi_data.Properties.VariableNames = headers;
+        end
+        
     else
         %Handle if user hit cancel
         mod_FM = [];
@@ -237,7 +263,7 @@ function freqAnalysis(data, Fs, IF, FileName)
         subplot(3,1,3)
         plot(timedata)
         title("Signal I/Q components")
-        %pause
+        pause
         % ****uncomment until here when plots are not needed****************
 
         % ** Make the function return the values below
@@ -249,7 +275,7 @@ end
 function [mod_type] = is_FM(data, Fs, IF, FileName)
     % this area will be a function that will return modulation type
 
-    global freqData;
+    global freqData freqMax;
 
     L=length(data);             %total number of samples recorded.
 
@@ -259,8 +285,8 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
     w = 1000;                     %using an arbitrary window size for now. Line below will be used.
     %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
     x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
-    k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
-    %k = 150;                    % setting the value to 150 temporarily...might cause errors
+    %k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
+    k = 150;                    % setting the value to 150 temporarily...might cause errors
     %freqData=fft(data,w);       %stores frequency info for the values in the first window
 
     % calculates threshold
@@ -277,9 +303,10 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
     freqMean=zeros(k,1);
     freqMode=zeros(k,1);
     freqVariance=zeros(k,1);
-
+    tic
     for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
-        freqData= fft(data((c*w):end),w);
+        %freqData= fft(data((c*w):end),w);
+        freqData= fftshift(fft(data((c*w):end),w));
 
         % ****uncomment from here when plots are needed****************
         subplot(3,1,1)
@@ -293,7 +320,7 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         title("Signal in time domain")
 
         subplot(3,1,3)
-        plot(timedata)
+        plot(timedata, '*')
         title("Signal I/Q components")
         %pause
         % ****uncomment until here when plots are not needed****************
@@ -303,7 +330,7 @@ function [mod_type] = is_FM(data, Fs, IF, FileName)
         [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
 
     end
-
+    toc
     % Evaluates Frequency modulation results
     % it measures the standard deviation of the max values obtain above.
     % if the standard deviation is greated than 20kHz (set arbitrarily due to
@@ -363,10 +390,14 @@ end
 
 %% I'm not sure what this is for
 function rec_mod_type(mod_type, IF)
-    global soi_data
+    global soi_data csv_file
 
      % Find index of current freq
-    soi_index=(soi_data.frequency_mhz==IF/1e6);
+    if strcmp(csv_file, 'csv_files/orphan_files.csv')
+        soi_index=height(soi_data);
+    else  
+        soi_index=(soi_data.frequency_mhz==IF/1e6);
+    end
 
     % Add entry for determined mod type
     soi_data.mod_type{soi_index} = mod_type;
@@ -405,6 +436,8 @@ end
 % captured) *****It still requires the changes that Hunter made to extract
 % the LO freq, the sampling rate (Fs) from the file name
 function [data, Fs, IF]=GetBinData(filePath, fileName)
+    global soi_data csv_file
+    %global csv_file
     fileID=fopen([filePath, fileName], 'r');
     data = fread(fileID,'float32');
     data = data(1:2:end) +1i*data(2:2:end); %represents data as f=I+jQ
@@ -417,13 +450,22 @@ function [data, Fs, IF]=GetBinData(filePath, fileName)
         IF=str2double(info{1})*1e6; %add code to obtain IF that receiver is tuned to
     catch
         Fs = 820e3; %Hz. For testing purposes with the music.bin file
-    	IF = 76.5e6; % For testing purposes with the music.bin file
+    	IF = 0; % For testing purposes with the music.bin file
     end
     if isnan(Fs)
         Fs = 820e3; %Hz. For testing purposes with the music.bin file
-        IF = 76.5e6; % For testing purposes with the music.bin file
+        IF = 0; % For testing purposes with the music.bin file
     end
     %Eliminates the DC component using the mean value
     data = data-mean(data);
 
+    %If the csv_file was the alternate file, append signal info to soi_data
+    if strcmp(csv_file, 'csv_files/orphan_files.csv')
+        if strcmp(soi_data{height(soi_data),1},'')
+            use_row=1;
+        else
+            use_row=height(soi_data)+1;
+        end
+        soi_data(use_row,:)={datestr(now, 'yyyyMMdd_HHmmss') IF/1e6 Fs/1e3 0 0 [filePath,fileName] 'unk'};
+    end
 end
