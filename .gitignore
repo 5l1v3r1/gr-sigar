@@ -41,5 +41,6 @@ Thumbs.db
 # Specific items #
 ##################
 bin_files/
+gd_tests/
 gr-scan
 *.asv
