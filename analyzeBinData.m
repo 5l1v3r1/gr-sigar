@@ -275,19 +275,15 @@ end
 %% frequency analysis***
 function freqAnalysis(data, Fs, IF, FileName)
     global freqData freqMax
-     
     L=length(data);             %total number of samples recorded.
-
     %Is this needed?
     duration=L/Fs;              %determines the total duration of the signal in seconds
-
     w = 1000;                     %using an arbitrary window size for now. Line below will be used.
     %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
     x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
     k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
     %k =150;                    % setting the value to 150 temporarily...might cause errors
     %freqData=fft(data,w);       %stores frequency info for the values in the first window
-
     % calculates threshold
     % freqData= fft(data(Fs*25:end),w);
     % threshold = 1.5 * mean(abs(freqData));  %sets the threshold to 1.5 times the value of the overall mean
@@ -295,7 +291,6 @@ function freqAnalysis(data, Fs, IF, FileName)
     threshold = 0.6;  % the lines above have an error for the threshold. Not being used yet. will be used for signal detection
 
     set(gca,'YScale','log')
-
     % these vectors will store the statisical values of the FFT's for signal
     % evaluation
     freqMax=zeros(k,1);
@@ -306,33 +301,31 @@ function freqAnalysis(data, Fs, IF, FileName)
     for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
         %freqData= fft(data((c*w):end),w);
         freqData= fftshift(fft(data((c*w):end),w));
-
         % ****uncomment from here when plots are needed****************
-%         subplot(3,1,1)
-%         plot(x_Hz,abs(freqData))
-%         title("Signal's FFT")
-%         %data for time domain plot
-%         subplot(3,1,2)
-%         timedata = (data(w*(c-1)+1:w*c));
-%         x = (1:1:w)*(c/Fs);
-%         plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
-%         title("Signal in time domain")
-% 
-%         subplot(3,1,3)
-%         plot(timedata, '*')
-%         title("Signal I/Q components")
+        subplot(3,1,1)
+        plot(x_Hz,abs(freqData))
+        title("Signal's FFT")
+        %data for time domain plot
+        subplot(3,1,2)
+        timedata = (data(w*(c-1)+1:w*c));
+        x = (1:1:w)*(c/Fs);
+        plot(x,abs(timedata), x, imag(timedata), x, real(timedata))
+        title("Signal in time domain")
+
+        subplot(3,1,3)
+        plot(timedata, '*')
+        title("Signal I/Q components")
         %pause
         % ****uncomment until here when plots are not needed****************
 
         %plot(x_Hz2,abs(freqData2))
-
         [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
 
     end
 toc
 end
-%% frequency analysis***
-function [mod_type, certainty] = is_FM(data, Fs, IF, FileName)
+%% Determines if a sighnal is frequency modulated***
+function [FM_modulated, certainty] = is_FM(data, Fs, IF, FileName)
     % this area will be a function that will return modulation type
     global freqMax
     
@@ -351,15 +344,15 @@ function [mod_type, certainty] = is_FM(data, Fs, IF, FileName)
     
     if isFM>5           % if > 5 out of 10 freqMax sections meet the variation rqmnt, signal is FM 
         fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, certainty)
-        mod_type=true;
+        FM_modulated=true;
     else
         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
-        mod_type=false;
+        FM_modulated=false;
     end
 end
 
 %% Determines if a signal is AM (Returns 'true if it is)
-function [mod_type, certainty] = is_AM(data, Fs, IF, FileName)
+function [AM_modulated, certainty] = is_AM(data, Fs, IF, FileName)
 %is_AM(freqMax, freqMaxValue, IF, FileName)
 %is_AM(freqMax, freqMaxValue)
     
@@ -367,9 +360,20 @@ function [mod_type, certainty] = is_AM(data, Fs, IF, FileName)
     % frequency where the max value over 10 different sections of the
     % signal. If the majority of the results concur (5 or more), then, the
     % script will return a positive for AM
+
     global freqMax
     
     freqAnalysis(data, Fs, IF, FileName)
+    
+    % still needs work
+    for c=x:size(vector with fft values) 
+        valueVariance(index) = ***variance**** % data 
+        if var(freqMax) < 10	%if the peak frequency doesn't change
+            if std(valueVariance)> 10 && std(valueVariance)< 200e3	%if around the peak, the variance of the signal changes, the signal is likely to be AM
+                AM_modulated=true
+            end
+        end
+    end
     
     chunkSize = fix(length(freqMax)/10);
     isFM=0;
@@ -384,10 +388,10 @@ function [mod_type, certainty] = is_AM(data, Fs, IF, FileName)
     
     if isFM<1           %<1 for testing det_modtype
         fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, certainty)
-        mod_type=true;
+        AM_modulated=true;
     else
         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
-        mod_type=false;
+        AM_modulated=false;
     end
 
 end
