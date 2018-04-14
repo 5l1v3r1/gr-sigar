@@ -105,13 +105,10 @@ while true
             %gr-scan cannot be closed cleanly.
             [status, cmdout] = unix(command, '-echo');
             %[status, cmdout] = system(['echo ',command], '-echo');  %Demo for windows
-
         case '1'
             %specify file(s) to analyze
             %*******************************Add error handling in case this fails*******************************
             [mod_indication, int_freq] = evaluateSignal;
-
-
         case '2'
             %exit is the only command that actually brreaks the input loop
             break
@@ -187,34 +184,37 @@ function [mod_info, IF] = evaluateSignal
     if iscellstr(FileName)
         %If FileName is a cell string, iterate through indexes for analysis
         for i=1:numel(FileName) 
-            [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
+%             [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
             
+            % **************needs work*****************
             % **  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
             % **  mod_FM = is_FM(freqMax, IF); Change line below to this
-            [mod_FM, cert_FM] = is_FM(data, Fs, IF, FileName);
-            [mod_AM, cert_AM] = is_AM(data, Fs, IF, FileName);
-            
-            analysis_results(1,:) = {'FM' mod_FM cert_FM};
-            analysis_results(2,:)={'AM' mod_AM cert_AM};
-            
-            %Determine modulation type
-            mod_info=det_modtype(analysis_results);
-            %Record modulation type
-            rec_mod_type(mod_info, IF);
-            
-            % ** if mod_FM == false then
-            % **    mod_AM = is_AM(freqMax, freqMaxValue)
-            
-            %Create a new figure for next interation
-            if i~= numel(FileName)
-                figure
-            end
+            % **  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
+%             [mod_FM, cert_FM] = is_FM(data, Fs, IF, FileName);
+%             [mod_AM, cert_AM] = is_AM(data, Fs, IF, FileName);
+%             
+%             analysis_results(1,:) = {'FM' mod_FM cert_FM};
+%             analysis_results(2,:)={'AM' mod_AM cert_AM};
+%             
+%             %Determine modulation type
+%             mod_info=det_modtype(analysis_results);
+%             %Record modulation type
+%             rec_mod_type(mod_info, IF);
+%             
+%             % ** if mod_FM == false then
+%             % **    mod_AM = is_AM(freqMax, freqMaxValue)
+%             
+%             %Create a new figure for next interation
+%             if i~= numel(FileName)
+%                 figure
+%             end
         end
-    elseif ischar(FileName)
-        %Only one file was chosen, no loop required
-        [data, Fs, IF]=GetBinData(PathName, FileName);
-        [mod_FM, cert_FM] = is_FM(data, Fs, IF, FileName);
-        [mod_AM, cert_AM] = is_AM(data, Fs, IF, FileName);
+    elseif ischar(FileName)    %Only one file was chosen, no loop required
+        [data, Fs, IF]=GetBinData(PathName, FileName); %gets binary data from file
+        [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF); %performs FFT analysis and returns vectors with statistical values
+        %[mod_FM, cert_FM] = is_FM(data, Fs, IF, FileName);
+        [mod_FM, cert_FM] = is_FM(freqMax, IF);
+        [mod_AM, cert_AM] = is_AM(freqMax, freqVariance, IF);
         analysis_results = {'FM' mod_FM cert_FM; 'AM' mod_AM cert_AM};
         
         %Determine modulation type
@@ -273,8 +273,9 @@ function [mt]=det_modtype(mod_ind)
 end
 
 %% frequency analysis***
-function freqAnalysis(data, Fs, IF, FileName)
-    global freqData freqMax
+function [freqMax,freqMean, freqMode,freqVariance] = freqAnalysis(data, Fs, IF)
+
+    global freqData
     L=length(data);             %total number of samples recorded.
     %Is this needed?
     duration=L/Fs;              %determines the total duration of the signal in seconds
@@ -315,26 +316,23 @@ function freqAnalysis(data, Fs, IF, FileName)
         subplot(3,1,3)
         plot(timedata, '*')
         title("Signal I/Q components")
-        %pause
+        pause
         % ****uncomment until here when plots are not needed****************
 
         %plot(x_Hz2,abs(freqData2))
         [freqMax(c), freqMean(c), freqMode(c), freqVariance(c)]=getStatsData(freqData, x_Hz);
-
     end
 toc
 end
 %% Determines if a sighnal is frequency modulated***
-function [FM_modulated, certainty] = is_FM(data, Fs, IF, FileName)
-    % this area will be a function that will return modulation type
-    global freqMax
+function [FM_modulated, certainty] = is_FM(vector_maxFreq, IF)
+    %global freqMax
+    %freqAnalysis(data, Fs, IF, FileName)
     
-    freqAnalysis(data, Fs, IF, FileName)
-    
-    chunkSize = fix(length(freqMax)/10);
+    chunkSize = fix(length(vector_maxFreq)/10);
     isFM=0;
     for c= 1:10
-        stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
+        stdValue = std(vector_maxFreq(chunkSize*(c-1)+1:chunkSize*c)); 
         if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
             isFM=isFM+1;
         end 
@@ -352,7 +350,7 @@ function [FM_modulated, certainty] = is_FM(data, Fs, IF, FileName)
 end
 
 %% Determines if a signal is AM (Returns 'true if it is)
-function [AM_modulated, certainty] = is_AM(data, Fs, IF, FileName)
+function [AM_modulated, certainty] = is_AM(freqMax, freqVariance, IF)
 %is_AM(freqMax, freqMaxValue, IF, FileName)
 %is_AM(freqMax, freqMaxValue)
     
@@ -361,39 +359,40 @@ function [AM_modulated, certainty] = is_AM(data, Fs, IF, FileName)
     % signal. If the majority of the results concur (5 or more), then, the
     % script will return a positive for AM
 
-    global freqMax
+    %global freqMax
     
-    freqAnalysis(data, Fs, IF, FileName)
+    %freqAnalysis(data, Fs, IF, FileName)
     
     % still needs work
-    for c=x:size(vector with fft values) 
-        valueVariance(index) = ***variance**** % data 
-        if var(freqMax) < 10	%if the peak frequency doesn't change
-            if std(valueVariance)> 10 && std(valueVariance)< 200e3	%if around the peak, the variance of the signal changes, the signal is likely to be AM
-                AM_modulated=true
-            end
-        end
-    end
+%     for c=x:size(vector with fft values) 
+%         valueVariance(index) = ***variance**** % data 
+%         if var(freqMax) < 10	%if the peak frequency doesn't change
+%             if std(valueVariance)> 10 && std(valueVariance)< 200e3	%if around the peak, the variance of the signal changes, the signal is likely to be AM
+%                 AM_modulated=true
+%             end
+%         end
+%     end
     
-    chunkSize = fix(length(freqMax)/10);
-    isFM=0;
-    for c= 1:10
-        stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
-        if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
-            isFM=isFM+1;
-        end 
-    end
-    
-       certainty=isFM*10;
-    
-    if isFM<1           %<1 for testing det_modtype
-        fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, certainty)
-        AM_modulated=true;
-    else
-        fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
-        AM_modulated=false;
-    end
-
+%     chunkSize = fix(length(freqMax)/10);
+%     isFM=0;
+%     for c= 1:10
+%         stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
+%         if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
+%             isFM=isFM+1;
+%         end 
+%     end
+%     
+%        certainty=isFM*10;
+%     
+%     if isFM<1           %<1 for testing det_modtype
+%         fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, certainty)
+%         AM_modulated=true;
+%     else
+%         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
+%         AM_modulated=false;
+%     end
+    AM_modulated = false;
+    certainty = 100;
 end
 
 %% I'm not sure what this is for
