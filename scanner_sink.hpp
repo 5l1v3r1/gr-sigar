@@ -77,7 +77,7 @@ public:
 				exit(1);
 			}
 			if (write_csv_header) {
-				fprintf(m_outcsv, "time,frequency_mhz,width_khz,peak,dif,filename,mod_type\n");
+				fprintf(m_outcsv, "time,frequency_mhz,width_khz,peak,dif,filename,mod_type,certainty\n");
 				fflush(m_outcsv);
 			}
 		}
@@ -293,7 +293,7 @@ private:
 		strftime(time_stamp, 7, "%H%M%S", tm_info);
 		// Record IQ data and return name of file
 		std::string filename = RecordIQ(freq, width, time_stamp);
-		fprintf(m_outcsv, "%s,%f,%f,%f,%f,%s,%s\n", buf, freq, width, peak, diff, filename.c_str(), "unk");
+		fprintf(m_outcsv, "%s,%f,%f,%f,%f,%s,%s,%f\n", buf, freq, width, peak, diff, filename.c_str(), "unk", 0.0);
 		fflush(m_outcsv);
 	}
 
