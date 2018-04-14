@@ -212,8 +212,7 @@ function [mod_info, IF] = evaluateSignal
     elseif ischar(FileName)    %Only one file was chosen, no loop required
         [data, Fs, IF]=GetBinData(PathName, FileName); %gets binary data from file
         [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF); %performs FFT analysis and returns vectors with statistical values
-        %[mod_FM, cert_FM] = is_FM(data, Fs, IF, FileName);
-        [mod_FM, cert_FM] = is_FM(freqMax, IF);
+        [mod_FM, cert_FM] = is_FM(freqMax, IF); % returns True if signal is FM and percentage of certainty
         [mod_AM, cert_AM] = is_AM(freqMax, freqVariance, IF);
         analysis_results = {'FM' mod_FM cert_FM; 'AM' mod_AM cert_AM};
         
@@ -316,7 +315,7 @@ function [freqMax,freqMean, freqMode,freqVariance] = freqAnalysis(data, Fs, IF)
         subplot(3,1,3)
         plot(timedata, '*')
         title("Signal I/Q components")
-        pause
+%         pause
         % ****uncomment until here when plots are not needed****************
 
         %plot(x_Hz2,abs(freqData2))
@@ -326,12 +325,17 @@ toc
 end
 %% Determines if a sighnal is frequency modulated***
 function [FM_modulated, certainty] = is_FM(vector_maxFreq, IF)
-    %global freqMax
-    %freqAnalysis(data, Fs, IF, FileName)
-    
+    %global freqMax   
     chunkSize = fix(length(vector_maxFreq)/10);
+    forLoopEnd=10;
+    
+    %if chunks are too small, just use the normal length of freqMax instead
+    if chunkSize ==1
+        chunkSize=length(freqMax);
+        forLoopEnd=1;
+    end
     isFM=0;
-    for c= 1:10
+    for c= 1:forLoopEnd
         stdValue = std(vector_maxFreq(chunkSize*(c-1)+1:chunkSize*c)); 
         if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
             isFM=isFM+1;
@@ -351,53 +355,40 @@ end
 
 %% Determines if a signal is AM (Returns 'true if it is)
 function [AM_modulated, certainty] = is_AM(freqMax, freqVariance, IF)
-%is_AM(freqMax, freqMaxValue, IF, FileName)
-%is_AM(freqMax, freqMaxValue)
+% still needs work as it might not account for files with a single peak
+% with noise around it
     
-    % the following for loop evaluates the standard deviation of the
-    % frequency where the max value over 10 different sections of the
-    % signal. If the majority of the results concur (5 or more), then, the
-    % script will return a positive for AM
-
     %global freqMax
+    chunkSize = fix(length(freqMax)/10);
+    forLoopEnd=10;
     
-    %freqAnalysis(data, Fs, IF, FileName)
+    %if chunks are too small, just use the normal length of freqMax instead
+    if chunkSize ==1
+        chunkSize=length(freqMax);
+        forLoopEnd=1;
+    end
     
-    % still needs work
-%     for c=x:size(vector with fft values) 
-%         valueVariance(index) = ***variance**** % data 
-%         if var(freqMax) < 10	%if the peak frequency doesn't change
-%             if std(valueVariance)> 10 && std(valueVariance)< 200e3	%if around the peak, the variance of the signal changes, the signal is likely to be AM
-%                 AM_modulated=true
-%             end
-%         end
-%     end
-    
-%     chunkSize = fix(length(freqMax)/10);
-%     isFM=0;
-%     for c= 1:10
-%         stdValue = std(freqMax(chunkSize*(c-1)+1:chunkSize*c)); 
-%         if (stdValue>20 && stdValue<20e3)	%Common audio frequencies vary between 20Hz to 20kHz
-%             isFM=isFM+1;
-%         end 
-%     end
-%     
-%        certainty=isFM*10;
-%     
-%     if isFM<1           %<1 for testing det_modtype
-%         fprintf('Signal at %0.4f MHz is frequency modulated with %0.2f %% certainty \n\n', IF/1e6, certainty)
-%         AM_modulated=true;
-%     else
-%         fprintf('Signal at %0.4f MHz is not frequency modulated\n\n', IF/1e6)
-%         AM_modulated=false;
-%     end
-    AM_modulated = false;
-    certainty = 100;
+    isAM=0;
+    for c=1:forLoopEnd 
+        %valueVariance(index) = freqVariance 
+        if var(freqMax(chunkSize*(c-1)+1:chunkSize*c)) < 10	%if the peak frequency doesn't change (much)
+            if std(freqVariance(chunkSize*(c-1)+1:chunkSize*c))> 10 && std(freqVariance(chunkSize*(c-1)+1:chunkSize*c))< 200e3	%if around the peak, the variance of the signal changes, the signal is likely to be AM
+                isAM=isAM+1;
+            end
+        end
+    end
+    certainty=isAM*10;
+    if isAM>5           %<1 for testing det_modtype
+        fprintf('Signal at %0.4f MHz is amplitude modulated with %0.2f %% certainty \n\n', IF/1e6, certainty)
+        AM_modulated=true;
+    else
+        fprintf('Signal at %0.4f MHz is not amplitude modulated\n\n', IF/1e6)
+        AM_modulated=false;
+    end
 end
 
 %% I'm not sure what this is for
-    %It's a seperate function for entering the mod type into the data
-    %table. 
+%It's a seperate function for entering the mod type into the data table.
 function rec_mod_type(mod_type, IF)
     global soi_data csv_file
 
