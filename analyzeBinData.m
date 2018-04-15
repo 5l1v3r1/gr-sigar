@@ -9,7 +9,7 @@ init_prompt = ['What do you want to do?\n\n'...
         '1:    Search for bin/dat file(s) to analyze\n'...
         '2:    Exit\n> '];
 
- global soi_data csv_file freqData freqMax
+ global soi_data csv_file freqData
  mod_indication={};
  freqData=[];
  %gr-scan variable options
@@ -134,7 +134,7 @@ function [mod_info, IF] = evaluateSignal
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
 
-    if iscellstr(FileName) || ischar(FileName)
+    if iscell(FileName) || ischar(FileName)
         wrk_dir=strsplit(PathName, filesep);                                            %Split the directory for the selected file(s)
         run_info = {wrk_dir(length(wrk_dir)-2), wrk_dir(length(wrk_dir)-1)};            %Pull run date and time (unique to each run)
         wrk_dir(length(wrk_dir)-3:length(wrk_dir))=[];                                  %Clear the path name back to gr-scan directory
@@ -162,10 +162,10 @@ function [mod_info, IF] = evaluateSignal
         else                                               
             csv_file=alt_csv;
             %variable names
-            headers = {'time' 'frequency_mhz' 'width_khz' 'peak' 'dif' 'filename' 'mod_type'};
+            headers = {'time' 'frequency_mhz' 'width_khz' 'peak' 'dif' 'filename' 'mod_type' 'certainty'};
             %a cell array with numbertts to force matlab to allow numeric
             %values in appropriate columns
-            data={'' 0 0 0 0 '' ''};
+            data={'' 0 0 0 0 '' '' 0};
             %Create table and assign column headers
             soi_data=cell2table(data);
             soi_data.Properties.VariableNames = headers;
@@ -173,63 +173,45 @@ function [mod_info, IF] = evaluateSignal
         
     else
         %Handle if user hit cancel
-        mod_FM = [];
+        mod_info = [];
         IF = [];
         return
     end
 
-    %FileName = 0 if user hits cancel
-    %Easier to determine type in two different cases as opposed to forcing
-    %FileName to be a cell
-    if iscellstr(FileName)
-        %If FileName is a cell string, iterate through indexes for analysis
-        for i=1:numel(FileName) 
-%             [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
-            
-            % **************needs work*****************
-            % **  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
-            % **  mod_FM = is_FM(freqMax, IF); Change line below to this
-            % **  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
-%             [mod_FM, cert_FM] = is_FM(data, Fs, IF, FileName);
-%             [mod_AM, cert_AM] = is_AM(data, Fs, IF, FileName);
-%             
-%             analysis_results(1,:) = {'FM' mod_FM cert_FM};
-%             analysis_results(2,:)={'AM' mod_AM cert_AM};
-%             
-%             %Determine modulation type
-%             mod_info=det_modtype(analysis_results);
-%             %Record modulation type
-%             rec_mod_type(mod_info, IF);
-%             
-%             % ** if mod_FM == false then
-%             % **    mod_AM = is_AM(freqMax, freqMaxValue)
-%             
-%             %Create a new figure for next interation
-%             if i~= numel(FileName)
-%                 figure
-%             end
-        end
-    elseif ischar(FileName)    %Only one file was chosen, no loop required
-        [data, Fs, IF]=GetBinData(PathName, FileName); %gets binary data from file
-        [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF); %performs FFT analysis and returns vectors with statistical values
-        [mod_FM, cert_FM] = is_FM(freqMax, IF); % returns True if signal is FM and percentage of certainty
+    %Force FileName to be a cellstring because uigetfile will return a
+    %char string for one file and a cell string for multiple files. Forcing
+    %it to alwayus be a cell string makes logic easier to manage.
+    FileName=cellstr(FileName);
+    for i=1:numel(FileName) 
+        [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
+
+        [freqMax, freqMean, freqMode, freqVariance]=freqAnalysis(data, Fs, IF); %#ok<ASGLU> performs FFT analysis and returns vectors with statistical values
+        %**************needs work*****************
+        %**  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
+        %**  mod_FM = is_FM(freqMax, IF); Change line below to this
+        %**  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
+
+        [mod_FM, cert_FM] = is_FM(freqMax, IF); % returns True if signal is FM and within a percentage range of certainty
         [mod_AM, cert_AM] = is_AM(freqMax, freqVariance, IF);
-        analysis_results = {'FM' mod_FM cert_FM; 'AM' mod_AM cert_AM};
-        
+
+        analysis_results = {'FM' mod_FM cert_FM;...
+                            'AM' mod_AM cert_AM};
+
         %Determine modulation type
         mod_info=det_modtype(analysis_results);
-        %Record modulation type
+        %Record modulation type into soi_data table
         rec_mod_type(mod_info, IF);
+
+        % ** if mod_FM == false then
+        % **    mod_AM = is_AM(freqMax, freqMaxValue)
     end
 end
 
 %% Determine mod type (protoytype)
-function [mt]=det_modtype(mod_ind)
-
-    %Change output to include certainty
+function [mt]=det_modtype(analysis_results)
     
     %Find maximum percentage of certainty 
-    [value, row] = max([mod_ind{:,3}]);
+    [highest_certainty, row] = max([analysis_results{:,3}]);
     %Create an empty array to hold certainty percentages for comparison
     hit=[];
 
@@ -238,30 +220,27 @@ function [mt]=det_modtype(mod_ind)
     %hits above 50, then the signal is ambiguous.
     
     %If the highest certanty is greater than 50%
-    if value > 50
+    if highest_certainty > 50
         %for every row in mod_ind
-        for i=1:size(mod_ind,1)
-            %if positive determination was made
-            if mod_ind{i,2} == true
-                %if that determination was equal to the highest certainty
-                if mod_ind{i,3} == value
-                    %record the hit
-                    hit=[hit mod_ind{i,3}];
-                end
+        for i=1:size(analysis_results,1)
+            %if that determination was equal to the highest certainty
+            if analysis_results{i,3} == highest_certainty
+                %record the hit
+                hit=[hit analysis_results{i,3}]; %#ok<AGROW>
             end
         end
 
         %If there was only one hit
         if length(hit)==1
-            %Use corresponding determination
-            mt=mod_ind{row,1};
+            %Use corresponding determination {Modulation type, certainty precentage}
+            mt={analysis_results{row,1}, analysis_results{row, 3}};
         else
             %Otherwise, signal is ambiguous
-            mt='Unk';
+            mt={'Unk', 0};
         end
     else
         %Otherwise, signal is ambiguous
-        mt='Unk';
+        mt={'Unk',0};
     end
     
 %     if mod_FM==true
@@ -272,7 +251,7 @@ function [mt]=det_modtype(mod_ind)
 end
 
 %% frequency analysis***
-function [freqMax,freqMean, freqMode,freqVariance] = freqAnalysis(data, Fs, IF)
+function [freqMax, freqMean, freqMode, freqVariance] = freqAnalysis(data, Fs, IF)
 
     global freqData
     L=length(data);             %total number of samples recorded.
@@ -281,16 +260,18 @@ function [freqMax,freqMean, freqMode,freqVariance] = freqAnalysis(data, Fs, IF)
     w = 1000;                     %using an arbitrary window size for now. Line below will be used.
     %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
     x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
-    k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
-    %k =150;                    % setting the value to 150 temporarily...might cause errors
+    %k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
+    k =150;                    % setting the value to 150 temporarily...might cause errors
     %freqData=fft(data,w);       %stores frequency info for the values in the first window
     % calculates threshold
     % freqData= fft(data(Fs*25:end),w);
     % threshold = 1.5 * mean(abs(freqData));  %sets the threshold to 1.5 times the value of the overall mean
     % clear freqData'
     threshold = 0.6;  % the lines above have an error for the threshold. Not being used yet. will be used for signal detection
-
-    set(gca,'YScale','log')
+    
+    %figure
+    %set(gca,'YScale','log')
+    
     % these vectors will store the statisical values of the FFT's for signal
     % evaluation
     freqMax=zeros(k,1);
@@ -301,6 +282,7 @@ function [freqMax,freqMean, freqMode,freqVariance] = freqAnalysis(data, Fs, IF)
     for c=1:k % Runs the FFT analysys and stores stats values in the vectors defined above
         %freqData= fft(data((c*w):end),w);
         freqData= fftshift(fft(data((c*w):end),w));
+        
         % ****uncomment from here when plots are needed****************
         subplot(3,1,1)
         plot(x_Hz,abs(freqData))
@@ -315,7 +297,7 @@ function [freqMax,freqMean, freqMode,freqVariance] = freqAnalysis(data, Fs, IF)
         subplot(3,1,3)
         plot(timedata, '*')
         title("Signal I/Q components")
-%         pause
+        %pause
         % ****uncomment until here when plots are not needed****************
 
         %plot(x_Hz2,abs(freqData2))
@@ -331,7 +313,7 @@ function [FM_modulated, certainty] = is_FM(vector_maxFreq, IF)
     
     %if chunks are too small, just use the normal length of freqMax instead
     if chunkSize ==1
-        chunkSize=length(freqMax);
+        chunkSize=length(vector_maxFreq);%freqMax);
         forLoopEnd=1;
     end
     isFM=0;
@@ -399,8 +381,11 @@ function rec_mod_type(mod_type, IF)
         soi_index=(soi_data.frequency_mhz==IF/1e6);
     end
 
+    %Separated for clarity
     % Add entry for determined mod type
-    soi_data.mod_type{soi_index} = mod_type;
+    soi_data.mod_type{soi_index} = mod_type{1};
+    %Add entry for certainty; values of type double must be referenced by position
+    soi_data{soi_index, 8} = mod_type{2};
 end
 
 %% Measures basic statistical values for data contained in vector freqInfo
@@ -415,7 +400,7 @@ function [maximum, meanValue, modeValue, variance]=getStatsData(freqInfo, xAxis)
     %faster. However; it may impact detection.
     maximum = xAxis(freqInfo == max(freqInfo(:)));
     meanValue = mean(freqInfo); %this value is not being use as of right now
-    modeValue = 0;              %requires work
+    modeValue = mode(freqInfo);              %requires work
     variance =var(freqInfo);    %this value is not being use as of right now
 end
 
@@ -444,6 +429,9 @@ function [data, Fs, IF]=GetBinData(filePath, fileName)
     fclose(fileID);
 
     % Extracts data from file name
+    
+    %*********************Normalize Fs and IF Values***********************
+    
     try
         info=strsplit(fileName, {'-', '_'});
         Fs=2*str2double(info{2})*1e3; %Hz
@@ -466,6 +454,6 @@ function [data, Fs, IF]=GetBinData(filePath, fileName)
         else
             use_row=height(soi_data)+1;
         end
-        soi_data(use_row,:)={datestr(now, 'yyyyMMdd_HHmmss') IF/1e6 Fs/1e3 0 0 [filePath,fileName] 'unk'};
+        soi_data(use_row,:)={datestr(now, 'yyyyMMdd_HHmmss') IF/1e6 Fs/1e3 0 0 [filePath,fileName] 'unk' 0};
     end
 end
