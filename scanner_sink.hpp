@@ -64,7 +64,7 @@ public:
 		m_outcsv(NULL)
 	{
 		ZeroBuffer();
-		// Create directory for the IQ files, if outcsv is not empty, check csv directory exists
+		// Create directory for the IQ files, if outcsv is not empty, chech csv directory
 	  create_run_dirs(!outcsv.empty());
 		std::remove("blank.bin.hdr"); // Clean up from initialization of file meta sink
 		std::remove("blank.bin");
