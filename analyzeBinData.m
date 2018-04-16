@@ -186,10 +186,6 @@ function [mod_info, IF] = evaluateSignal
         [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
 
         [freqMax, freqMean, freqMode, freqVariance]=freqAnalysis(data, Fs, IF); %#ok<ASGLU> performs FFT analysis and returns vectors with statistical values
-        %**************needs work*****************
-        %**  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
-        %**  mod_FM = is_FM(freqMax, IF); Change line below to this
-        %**  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
 
         [mod_FM, cert_FM] = is_FM(freqMax, IF); % returns True if signal is FM and within a percentage range of certainty
         [mod_AM, cert_AM] = is_AM(freqMax, freqVariance, IF);
