@@ -3,16 +3,11 @@
 % mode and the variance
 % xAxis represents the frequency values
 function [maximum, meanValue, modeValue, variance]=getStatsData(freqInfo, xAxis)
-    %maxIndex = find(freqInfo == max(freqInfo(:)));
-    %maximum = xAxis(maxIndex);  %stores frequency where the max value was found
-
-    %The below removes the warning about indexed variabels and is a little
-    %faster. However; it may impact detection.
-    maximum = xAxis(freqInfo == max(freqInfo(:)));
+    maximum = xAxis(freqInfo == max(freqInfo(:))); %stores frequency where the max value was found
     if length(maximum)~=1
-        %if maximum cannot be determined, the first vector is chosen. This
-        %is usually inconsequential and happens at the end of a file.
-        maximum=freqInfo(1);
+        %if maximum cannot be determined, the first xAxis value is chosen. This
+        %is usually inconsequential and probably only happens at the end of a file.
+        maximum=xAxis(1);
     end
     meanValue = mean(freqInfo); %this value is not being use as of right now
     
