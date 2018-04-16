@@ -32,7 +32,7 @@ init_prompt = ['What do you want to do?\n\n'...
  dims = [1 65];
 
 while true
-    %Get user input for what to do
+    %Get user input for what to do next
     usr_in=input(init_prompt, 's');
     switch usr_in
         case '0'
