@@ -4,8 +4,6 @@
 % captured) *****It still requires the changes that Hunter made to extract
 % the LO freq, the sampling rate (Fs) from the file name
 function [data, Fs, IF, soi_data, csv_file]=GetBinData(filePath, fileName, soi_data, csv_file)
-    %global soi_data csv_file
-    %global csv_file
     fileID=fopen([filePath, fileName], 'r');
     data = fread(fileID,'float32');
     data = data(1:2:end) +1i*data(2:2:end); %represents data as f=I+jQ
@@ -17,14 +15,20 @@ function [data, Fs, IF, soi_data, csv_file]=GetBinData(filePath, fileName, soi_d
     try
         info=strsplit(fileName, {'-', '_'});
         Fs=2*str2double(info{2})*1e3; %Hz
-        IF=str2double(info{1})*1e6; %add code to obtain IF that receiver is tuned to
+        IF=str2double(info{1})*1e6;   %Hz
     catch
-        Fs = 820e3; %Hz. For testing purposes with the music.bin file
-    	IF = 0; % For testing purposes with the music.bin file
+        %Get user input for frequency and sampling rate if it cannot be
+        %determined.
+        recording_info=inputdlg({'Please specify an intermediate frequency (MHz)';'Please specify the sampling rate (MHz)'}, 'Signal recording info');
+        IF=str2double(recording_info{1})*1e6;   %Hz
+        Fs=str2double(recording_info{2})*1e6;   %Hz
     end
     if isnan(Fs)
-        Fs = 820e3; %Hz. For testing purposes with the music.bin file
-        IF = 0; % For testing purposes with the music.bin file
+        %Get user input for frequency and sampling rate if it cannot be
+        %determined.
+        recording_info=inputdlg({'Please specify an intermediate frequency (MHz)';'Please specify the sampling rate (MHz)'}, 'Signal recording info');
+        IF=str2double(recording_info{1})*1e6;   %Hz
+        Fs=str2double(recording_info{2})*1e6;   %Hz
     end
     %Eliminates the DC component using the mean value
     data = data-mean(data);

@@ -26,7 +26,7 @@ function [freqMax, freqMean, freqMode, freqVariance, freqData] = freqAnalysis(da
         freqData= fftshift(fft(data((c*w):end),w));
         
         % ****uncomment from here when plots are needed****************
-        %diagnostic_plots(data, freqData, c, k, w, x_Hz, Fs)
+        diagnostic_plots(data, freqData, c, k, w, x_Hz, Fs)
         % ****uncomment until here when plots are not needed****************
 
         %plot(x_Hz2,abs(freqData2))

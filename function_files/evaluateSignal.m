@@ -47,6 +47,9 @@ function [mod_info, IF, soi_data, csv_file, freqData] = evaluateSignal
         %Handle if user hit cancel
         mod_info = [];
         IF = [];
+        soi_data=[];
+        csv_file=[];
+        freqData=[];
         return
     end
 
