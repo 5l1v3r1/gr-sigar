@@ -1,8 +1,8 @@
-%% This algorithm will evaluate the modulation type of a signal captures
+%% This algorithm will evaluate the modulation type of captured signals
 % Assumptions: the data obtained contains only one usable signal. No signal
 % discrimination has been implemented yet.
 clear
-addpath(genpath('.')) %Add the subpaths in the home directory so files can be called from other directories
+addpath(genpath('.')) %Add the subdirectories in the home directory so files can be called from other directories
 %% Initial user input
 init_prompt = ['What do you want to do?\n\n'...
         '0:    Run gr-scan\n'...
