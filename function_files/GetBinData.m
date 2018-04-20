@@ -19,14 +19,14 @@ function [data, Fs, IF, soi_data, csv_file]=GetBinData(filePath, fileName, soi_d
     catch
         %Get user input for frequency and sampling rate if it cannot be
         %determined.
-        recording_info=inputdlg({'Please specify an intermediate frequency (MHz)';'Please specify the sampling rate (MHz)'}, 'Signal recording info');
+        recording_info=inputdlg({'Please specify an intermediate frequency (MHz)';'Please specify the sampling rate (kHz)'}, 'Signal recording info');
         IF=str2double(recording_info{1})*1e6;   %Hz
         Fs=str2double(recording_info{2})*1e6;   %Hz
     end
     if isnan(Fs)
         %Get user input for frequency and sampling rate if it cannot be
         %determined.
-        recording_info=inputdlg({'Please specify an intermediate frequency (MHz)';'Please specify the sampling rate (MHz)'}, 'Signal recording info');
+        recording_info=inputdlg({'Please specify an intermediate frequency MHz)';'Please specify the sampling rate (kHz)'}, 'Signal recording info');
         IF=str2double(recording_info{1})*1e6;   %Hz
         Fs=str2double(recording_info{2})*1e6;   %Hz
     end
