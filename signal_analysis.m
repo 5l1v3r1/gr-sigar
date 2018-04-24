@@ -9,8 +9,7 @@ init_prompt = ['What do you want to do?\n\n'...
         '1:    Search for bin/dat file(s) to analyze\n'...
         '2:    Exit\n> '];
     
- mod_indication={};
- int_freq={};
+
  %gr-scan variable options
  gr_prompt = {'FFT samples to average (default: 1000)'
  'Course bandwidth in kHz (default: fine bandwidth * 8)'
@@ -31,6 +30,8 @@ init_prompt = ['What do you want to do?\n\n'...
 
 while true
     %Get user input for what to do
+    mod_indication={};
+    int_freq={};
     usr_in=input(init_prompt, 's');
     switch usr_in
         case '0'
