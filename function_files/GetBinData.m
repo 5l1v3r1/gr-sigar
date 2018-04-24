@@ -40,6 +40,7 @@ function [data, Fs, IF, soi_data, csv_file]=GetBinData(filePath, fileName, soi_d
         else
             use_row=height(soi_data)+1;
         end
-        soi_data(use_row,:)={datestr(now, 'yyyyMMdd_HHmmss') IF/1e6 Fs/1e3 0 0 [filePath,fileName] 'unk' 0};
+        %Bandwidth assumed to be half of the sampling rate
+        soi_data(use_row,:)={datestr(now, 'yyyyMMdd_HHmmss') IF/1e6 Fs/2e3 0 0 [filePath,fileName] 'unk' 0};
     end
 end
