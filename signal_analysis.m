@@ -10,7 +10,7 @@ init_prompt = ['What do you want to do?\n\n'...
         '2:    Exit\n> '];
     
  mod_indication={};
- 
+ int_freq={};
  %gr-scan variable options
  gr_prompt = {'FFT samples to average (default: 1000)'
  'Course bandwidth in kHz (default: fine bandwidth * 8)'
