@@ -34,7 +34,7 @@ function [mod_info, IF, soi_data, csv_file, freqData] = evaluateSignal
         else                                               
             csv_file=alt_csv;
             %variable names
-            headers = {'time' 'frequency_mhz' 'width_khz' 'peak' 'dif' 'filename' 'mod_type' 'certainty'};
+            headers = {'time' 'frequency_mhz' 'width_khz' 'peak_db' 'dif_db' 'filename' 'mod_type' 'certainty'};
             %data is a cell array with numbers to force matlab to allow numeric
             %values in appropriate columns
             data={'' 0 0 0 0 '' '' 0};

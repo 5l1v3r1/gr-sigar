@@ -77,7 +77,7 @@ public:
 				exit(1);
 			}
 			if (write_csv_header) {
-				fprintf(m_outcsv, "time,frequency_mhz,width_khz,peak,dif,filename,mod_type,certainty\n");
+				fprintf(m_outcsv, "time,frequency_mhz,width_khz,peak_db,dif_db,filename,mod_type,certainty\n");
 				fflush(m_outcsv);
 			}
 		}
@@ -338,9 +338,9 @@ private:
 
 	std::string RecordIQ(float frq, float bw, char clk_time[7])
 	{
-		m_source->set_center_freq(frq*1000000);  // Set source to current freq
-		m_source->set_sample_rate(bw*2000);      // Set sample rate to twice bw
-		m_thr->set_sample_rate(bw*2000);         // Set throttle to sample rate
+		//m_source->set_center_freq(frq*1000000);  // Set source to current freq
+		//m_source->set_sample_rate(bw*2000);      // Set sample rate to twice bw
+		//m_thr->set_sample_rate(bw*2000);         // Set throttle to sample rate
 		// Generate filename
 		std::string file_name = m_iq_dir + std::to_string(frq) + "-" + std::to_string(bw)+"_";
 		file_name.append(clk_time);               // Append time stamp
