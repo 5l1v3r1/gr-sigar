@@ -23,7 +23,7 @@ init_prompt = ['What do you want to do?\n\n'...
         'End frequency in MHz (default: 108)'
         'Frequency step in MHz (default: sample rate / 4)'};
  gr_flags = {' -a ', ' -c ', ' -f ', ' -p ', ' -r ', ' -s ', ' -t ', ' -w ', ' -x ', ' -y ', ' -z '};
- out_filename=[];
+
  title = 'gr-scan options (leave blank for defaults)';
  %Dimension for text boxes
  dims = [1 65];
@@ -81,6 +81,7 @@ while true
             end
 
             options=[];
+            out_filename=[];
             %Create options string for calling gr-scan with specified
             %parameters
             for i=1:length(gr_flags)
