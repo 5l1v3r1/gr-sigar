@@ -10,8 +10,6 @@ function [data, Fs, IF, soi_data, csv_file]=GetBinData(filePath, fileName, soi_d
     fclose(fileID);
 
     % Extracts data from file name
-    
-    %*********************Normalize Fs and IF Values***********************
     try
         info=strsplit(fileName, {'-', '_'});
         Fs=2*str2double(info{2})*1e3; %Hz

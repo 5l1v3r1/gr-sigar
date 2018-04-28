@@ -7,12 +7,10 @@ function [freqMax, freqMean, freqMode, freqVariance, freqData] = freqAnalysis(da
     %w=Fs/100;                   %window size for FFT equivalent to 1/100 second worth of samples
     x_Hz = (0:w-1)*(Fs/w)+IF;     %will need adjustment since the IF will be frequency that the local oscillator is set to, not the frequency detected
     k = fix(L/w);                %number of fft's that can be performed. This will be used for the 'for' loop
-    %k =150;                    % setting the value to 150 temporarily...might cause errors
     %freqData=fft(data,w);       %stores frequency info for the values in the first window
     % calculates threshold
     % freqData= fft(data(Fs*25:end),w);
     % threshold = 1.5 * mean(abs(freqData));  %sets the threshold to 1.5 times the value of the overall mean
-    % clear freqData'
     threshold = 0.6;  % the lines above have an error for the threshold. Not being used yet. will be used for signal detection
     
     % these vectors will store the statisical values of the FFT's for signal

@@ -10,8 +10,6 @@ function [maximum, meanValue, modeValue, variance]=getStatsData(freqInfo, xAxis)
         maximum=xAxis(1);
     end
     meanValue = mean(freqInfo); %this value is not being use as of right now
-    
-    %****************************requires work*****************************
     modeValue = mode(freqInfo);
     variance =var(freqInfo);    %this value is not being use as of right now
 end

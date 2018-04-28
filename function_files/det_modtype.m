@@ -25,11 +25,11 @@ function [mt]=det_modtype(analysis_results)
             %Use corresponding determination {Modulation type, certainty precentage}
             mt={analysis_results{row,1}, analysis_results{row, 3}};
         else
-            %Otherwise, signal is ambiguous
+            %More than one hit, signal is ambiguous
             mt={'Unk', 0};
         end
     else
-        %Otherwise, signal is ambiguous
+        %No certainties above 50%, signal is ambiguous
         mt={'Unk',0};
     end
 end

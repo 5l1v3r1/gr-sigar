@@ -1,7 +1,6 @@
 %% Let user pick files, calls frequency analysis function (which determines mod type)
 function [mod_info, IF, soi_data, csv_file, freqData] = evaluateSignal
-    % Obtains data from file
-    % gets data from the binary file(s) created by gr-scan and determines
+    % Gets data from the binary file(s) created by gr-scan and determines
     % modulation type
 
     [FileName,PathName] = uigetfile('*.bin; *.dat', 'Select one or more files', 'MultiSelect', 'on');
