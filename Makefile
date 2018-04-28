@@ -20,7 +20,7 @@
 
 VERSION = 20180115
 CXXFLAGS ?= -O3 -march=native -fomit-frame-pointer
-CXXFLAGS +=-DVERSION="\"gr-scan $(VERSION)\"" -Wall
+CXXFLAGS +=-DVERSION="\"gr-scan $(VERSION)\"" -Wall -std=c++11
 LDLIBS = -lgnuradio-filter -lgnuradio-blocks -lgnuradio-pmt -lgnuradio-fft -lgnuradio-runtime -lgnuradio-osmosdr -lboost_system -lstdc++fs
 
 PREFIX ?= /usr

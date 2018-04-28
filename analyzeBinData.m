@@ -186,10 +186,6 @@ function [mod_info, IF] = evaluateSignal
         [data, Fs, IF]=GetBinData(PathName, FileName{i}); %gets I/Q data,sample frequency, and IF
 
         [freqMax, freqMean, freqMode, freqVariance]=freqAnalysis(data, Fs, IF); %#ok<ASGLU> performs FFT analysis and returns vectors with statistical values
-        %**************needs work*****************
-        %**  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
-        %**  mod_FM = is_FM(freqMax, IF); Change line below to this
-        %**  [freqMax,freqMean, freqMode,freqVariance]=freqAnalysis(data, Fs, IF)
 
         [mod_FM, cert_FM] = is_FM(freqMax, IF); % returns True if signal is FM and within a percentage range of certainty
         [mod_AM, cert_AM] = is_AM(freqMax, freqVariance, IF);
@@ -285,6 +281,7 @@ function [freqMax, freqMean, freqMode, freqVariance] = freqAnalysis(data, Fs, IF
         
         % ****uncomment from here when plots are needed****************
         subplot(3,1,1)
+        hold on
         plot(x_Hz,abs(freqData))
         title("Signal's FFT")
         %data for time domain plot
@@ -323,7 +320,6 @@ function [FM_modulated, certainty] = is_FM(vector_maxFreq, IF)
             isFM=isFM+1;
         end 
     end
-    
     certainty=isFM*10;
     
     if isFM>5           % if > 5 out of 10 freqMax sections meet the variation rqmnt, signal is FM 
@@ -354,7 +350,7 @@ function [AM_modulated, certainty] = is_AM(freqMax, freqVariance, IF)
     for c=1:forLoopEnd 
         %valueVariance(index) = freqVariance 
         if var(freqMax(chunkSize*(c-1)+1:chunkSize*c)) < 10	%if the peak frequency doesn't change (much)
-            if std(freqVariance(chunkSize*(c-1)+1:chunkSize*c))> 10 && std(freqVariance(chunkSize*(c-1)+1:chunkSize*c))< 200e3	%if around the peak, the variance of the signal changes, the signal is likely to be AM
+            if std(freqVariance(chunkSize*(c-1)+1:chunkSize*c))> 10 	%if around the peak, the variance of the signal changes, the signal is likely to be AM. Needs work
                 isAM=isAM+1;
             end
         end
