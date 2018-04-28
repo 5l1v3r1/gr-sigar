@@ -1,4 +1,5 @@
 function diagnostic_plots(data, freqData, c, k, w, x_Hz, Fs)
+        hold
         subplot(3,1,1)
         plot(x_Hz,abs(freqData))
         title("Signal's FFT")
